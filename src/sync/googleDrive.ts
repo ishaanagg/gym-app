@@ -193,6 +193,9 @@ export class GoogleDriveBackupProvider implements BackupProvider {
   }
 }
 
+const DEFAULT_GOOGLE_CLIENT_ID =
+  '319705740685-33lnao83bei408m42hs7ak2o3ik955q5.apps.googleusercontent.com';
+
 export const googleDriveBackup = new GoogleDriveBackupProvider(
-  import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
+  (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) || DEFAULT_GOOGLE_CLIENT_ID
 );

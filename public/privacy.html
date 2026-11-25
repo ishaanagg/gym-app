@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy — Kinetic</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 36px 20px;
+        background: #0b0f14;
+        color: #f1f5f9;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 680px;
+        margin: 0 auto;
+      }
+      h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+      h2 { font-size: 1.15rem; margin-top: 1.75rem; color: #10b981; }
+      p, li { color: #cbd5e1; }
+      a { color: #10b981; }
+      .muted { color: #94a3b8; font-size: 0.9rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Kinetic Privacy Policy</h1>
+      <p class="muted">Last updated: November 25, 2026</p>
+
+      <h2>1. Local-First Data Storage</h2>
+      <p>
+        Kinetic is a static, local-first web application. By default, all workout logs, progression
+        targets, gym equipment configurations, and profile settings are stored exclusively on your
+        own device inside your browser's IndexedDB storage. Kinetic does not operate any backend
+        servers, analytics trackers, or user databases.
+      </p>
+
+      <h2>2. Optional Google Drive Backup</h2>
+      <p>
+        If you choose to connect Google Drive in Settings, Kinetic requests the narrow
+        <code>https://www.googleapis.com/auth/drive.appdata</code> permission. This allows the app,
+        running directly in your browser, to save and restore a single JSON backup file
+        (<code>kinetic-backup.json</code>) inside your personal Google Drive's hidden
+        <code>appDataFolder</code>.
+      </p>
+      <ul>
+        <li>Kinetic cannot view, read, modify, or delete any other files or folders in your Google Drive.</li>
+        <li>Your data travels directly between your browser and Google's APIs; the developer never receives, stores, or transmits your data.</li>
+        <li>OAuth access tokens are held only in browser memory during your active session and are never persisted or shared with third parties.</li>
+      </ul>
+
+      <h2>3. Data Deletion &amp; Control</h2>
+      <p>
+        You can clear local data anytime via your browser settings, disconnect Google Drive inside
+        Kinetic Settings, or delete Kinetic's hidden app data from your Google Drive settings under
+        <em>Settings &rarr; Manage Apps &rarr; Kinetic</em>.
+      </p>
+
+      <p style="margin-top: 2.5rem;">
+        <a href="./">&larr; Back to Kinetic</a>
+      </p>
+    </main>
+  </body>
+</html>

@@ -35,6 +35,9 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
+        env:
+          # Public OAuth client id (not a secret). Set under Settings → Secrets and variables → Actions → Variables.
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

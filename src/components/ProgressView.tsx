@@ -1,6 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { Calendar, Download, TrendingUp, Upload } from 'lucide-react';
-import { storageRepo } from '../db/storage';
+import React from 'react';
+import { Calendar, TrendingUp } from 'lucide-react';
 import { getNextTarget } from '../engine/workoutGenerator';
 import type { Equipment, Exercise, ExerciseProgress, WorkoutSession } from '../types/gym';
 
@@ -9,7 +8,6 @@ interface ProgressViewProps {
   progress: Record<string, ExerciseProgress>;
   exercises: Exercise[];
   equipment: Equipment[];
-  onDataImported: () => Promise<void>;
 }
 
 export const ProgressView: React.FC<ProgressViewProps> = ({
@@ -17,10 +15,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
   progress,
   exercises,
   equipment,
-  onDataImported,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   const completedSessions = sessions.filter((s) => Boolean(s.completedAt));
   const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
@@ -29,34 +24,6 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
   const trackedExercises = Object.values(progress).sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
-
-  const handleExport = async () => {
-    const data = await storageRepo.exportAll();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `kinetic-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setStatusMsg('Backup exported.');
-  };
-
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      await storageRepo.importAll(parsed);
-      await onDataImported();
-      setStatusMsg('Backup restored successfully.');
-    } catch (err) {
-      setStatusMsg(err instanceof Error ? err.message : 'Failed to import backup.');
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -177,37 +144,6 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
         )}
       </div>
 
-      {/* Local Backup */}
-      <div className="card">
-        <div className="card-header">
-          <span className="section-label">Local Data Backup (JSON)</span>
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={handleExport}>
-            <Download size={16} /> Export
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ flex: 1 }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload size={16} /> Import
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json"
-            style={{ display: 'none' }}
-            onChange={handleImport}
-          />
-        </div>
-        {statusMsg && (
-          <p className="exercise-meta" style={{ marginTop: 10, color: 'var(--accent-emerald)' }}>
-            {statusMsg}
-          </p>
-        )}
-      </div>
     </div>
   );
 };

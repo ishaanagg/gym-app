@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, Dumbbell, Flame } from 'lucide-react';
+import { BarChart3, Dumbbell, Flame, Settings as SettingsIcon } from 'lucide-react';
 import { MyGymView } from './components/MyGymView';
 import { ProgressView } from './components/ProgressView';
+import { SettingsView } from './components/SettingsView';
 import { TodayView } from './components/TodayView';
 import { WorkoutPlayer } from './components/WorkoutPlayer';
-import { storageRepo } from './db/storage';
+import { DEFAULT_SETTINGS, storageRepo } from './db/storage';
+import { googleDriveBackup } from './sync/googleDrive';
 import {
   buildPlannedExercise,
   computeUpdatedProgress,
   generateWorkoutSession,
 } from './engine/workoutGenerator';
 import type {
+  AppSettings,
   BlockType,
   Equipment,
   Exercise,
@@ -19,7 +22,7 @@ import type {
   WorkoutSession,
 } from './types/gym';
 
-type Tab = 'today' | 'progress' | 'gym';
+type Tab = 'today' | 'progress' | 'gym' | 'settings';
 
 export function App() {
   const [loading, setLoading] = useState(true);
@@ -30,6 +33,7 @@ export function App() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [progress, setProgress] = useState<Record<string, ExerciseProgress>>({});
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
   const [plannedSession, setPlannedSession] = useState<WorkoutSession | null>(null);
   const [inProgressSession, setInProgressSession] = useState<WorkoutSession | null>(null);
@@ -42,6 +46,7 @@ export function App() {
     setSessions(data.sessions);
     setProgress(data.progress);
     setInProgressSession(data.activeSession);
+    setSettings(data.settings);
     setPlannedSession(
       generateWorkoutSession(30, data.equipment, data.exercises, data.sessions, data.progress)
     );
@@ -136,6 +141,34 @@ export function App() {
     setProgress(updatedProgress);
     setInProgressSession(null);
     setPlannedSession(finalized);
+
+    // Best-effort auto-backup: only when the user opted in and a Drive token is still valid.
+    // Never blocks or fails the workout; manual backup stays available in Settings.
+    if (settings.driveBackupEnabled && googleDriveBackup.isConnected()) {
+      try {
+        const { savedAt } = await googleDriveBackup.backup(await storageRepo.exportAll());
+        await handleSaveSettings({ ...settings, lastCloudBackupAt: savedAt });
+      } catch {
+        // Ignore; user can back up manually.
+      }
+    }
+  };
+
+  const handleSaveSettings = async (next: AppSettings) => {
+    setSettings(next);
+    await storageRepo.saveSettings(next);
+  };
+
+  const handleDeleteEquipment = async (id: string) => {
+    await storageRepo.deleteEquipment(id);
+    // Reload exercises: custom exercises linked to the removed machine were deleted with it.
+    const nextEq = equipment.filter((e) => e.id !== id);
+    const data = await storageRepo.initializeAndLoad();
+    setEquipment(nextEq);
+    setExercises(data.exercises);
+    setPlannedSession(
+      generateWorkoutSession(duration, nextEq, data.exercises, sessions, progress)
+    );
   };
 
   const handleSaveEquipment = async (item: Equipment) => {
@@ -173,7 +206,7 @@ export function App() {
           <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Kinetic" width={30} height={30} />
           <div>
             <div className="brand-title">Kinetic</div>
-            <div className="brand-sub">Building Gym · lbs</div>
+            <div className="brand-sub">{settings.gymName}</div>
           </div>
         </div>
         {isPlaying && <span className="badge badge-emerald">In Session</span>}
@@ -207,6 +240,7 @@ export function App() {
             onStartWorkout={handleStartWorkout}
             onResumeWorkout={handleResumeWorkout}
             onDiscardInProgress={handleDiscardInProgress}
+            userName={settings.userName}
           />
         ) : activeTab === 'progress' ? (
           <ProgressView
@@ -214,14 +248,21 @@ export function App() {
             progress={progress}
             exercises={exercises}
             equipment={equipment}
-            onDataImported={hydrateFromStorage}
+          />
+        ) : activeTab === 'settings' ? (
+          <SettingsView
+            settings={settings}
+            onSaveSettings={handleSaveSettings}
+            onDataRestored={hydrateFromStorage}
           />
         ) : (
           <MyGymView
+            gymName={settings.gymName}
             equipment={equipment}
             exercises={exercises}
             onSaveEquipment={handleSaveEquipment}
             onSaveExercise={handleSaveExercise}
+            onDeleteEquipment={handleDeleteEquipment}
           />
         )}
       </main>
@@ -252,6 +293,14 @@ export function App() {
             >
               <Dumbbell size={20} />
               <span>My Gym</span>
+            </button>
+            <button
+              type="button"
+              className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('settings')}
+            >
+              <SettingsIcon size={20} />
+              <span>Settings</span>
             </button>
           </div>
         </nav>

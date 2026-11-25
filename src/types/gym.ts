@@ -130,6 +130,15 @@ export interface ExerciseProgress {
   updatedAt: string;
 }
 
+export interface AppSettings {
+  userName: string;
+  gymName: string;
+  /** ISO timestamp of the last successful cloud backup (any provider). */
+  lastCloudBackupAt?: string;
+  /** Remembers that the user opted into Google Drive backup (no tokens are stored). */
+  driveBackupEnabled?: boolean;
+}
+
 export interface GymExportData {
   version: 1;
   exportedAt: string;
@@ -137,4 +146,6 @@ export interface GymExportData {
   exercises: Exercise[];
   sessions: WorkoutSession[];
   progress: ExerciseProgress[];
+  /** Optional so older v1 backups (without settings) still import. */
+  settings?: AppSettings;
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dumbbell, Edit3, Plus, Power, X } from 'lucide-react';
+import { Dumbbell, Edit3, Plus, Power, Trash2, X } from 'lucide-react';
 import { DEFAULT_GYM_ID } from '../data/defaultInventory';
 import type {
   BlockType,
@@ -13,10 +13,12 @@ import type {
 } from '../types/gym';
 
 interface MyGymViewProps {
+  gymName: string;
   equipment: Equipment[];
   exercises: Exercise[];
   onSaveEquipment: (item: Equipment) => Promise<void>;
   onSaveExercise: (exercise: Exercise) => Promise<void>;
+  onDeleteEquipment: (id: string) => Promise<void>;
 }
 
 const PATTERN_TO_VISUAL: Record<MovementPattern, VisualKey> = {
@@ -42,12 +44,15 @@ function derivePlane(
 }
 
 export const MyGymView: React.FC<MyGymViewProps> = ({
+  gymName,
   equipment,
   exercises,
   onSaveEquipment,
   onSaveExercise,
+  onDeleteEquipment,
 }) => {
   const [editing, setEditing] = useState<Equipment | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [weightsInput, setWeightsInput] = useState('');
   const [addingExerciseFor, setAddingExerciseFor] = useState<Equipment | null>(null);
   const [exName, setExName] = useState('');
@@ -67,6 +72,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
       notes: '',
     };
     setEditing(target);
+    setConfirmDelete(false);
     setWeightsInput(target.weightOptions.join(', '));
   };
 
@@ -135,7 +141,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
-          <h1 className="page-title">My Building Gym</h1>
+          <h1 className="page-title">{gymName}</h1>
           <p className="page-subtitle">
             Customize machines, exact plate increments, and linked movements.
           </p>
@@ -331,6 +337,50 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
             <button type="submit" className="btn btn-primary">
               Save Equipment
             </button>
+
+            {equipment.some((e) => e.id === editing.id) &&
+              (!confirmDelete ? (
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  style={{ color: '#fda4af', alignSelf: 'center' }}
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 size={14} /> Remove this machine
+                </button>
+              ) : (
+                <div
+                  style={{
+                    background: 'var(--accent-rose-soft)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: 12,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  <span style={{ fontSize: '0.86rem' }}>
+                    Remove <strong>{editing.name}</strong> from your gym? Past workouts and progress are kept.
+                    Tip: use <strong>Off</strong> instead if it's just temporarily broken.
+                  </span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setConfirmDelete(false)}>
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ flex: 1, background: 'var(--accent-rose)', color: '#fff' }}
+                      onClick={async () => {
+                        await onDeleteEquipment(editing.id);
+                        setEditing(null);
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
           </form>
         </div>
       )}

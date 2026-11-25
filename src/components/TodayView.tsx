@@ -23,6 +23,7 @@ interface TodayViewProps {
   onStartWorkout: () => void;
   onResumeWorkout: () => void;
   onDiscardInProgress: () => void;
+  userName?: string;
 }
 
 const DURATIONS: SessionDuration[] = [20, 30, 45, 60];
@@ -40,6 +41,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
   onStartWorkout,
   onResumeWorkout,
   onDiscardInProgress,
+  userName,
 }) => {
   const [swapTarget, setSwapTarget] = useState<{
     blockType: BlockType;
@@ -64,7 +66,9 @@ export const TodayView: React.FC<TodayViewProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
-        <h1 className="page-title">Today&apos;s Session</h1>
+        <h1 className="page-title">
+          {userName ? `Hi ${userName}, ready to move?` : 'Today\u2019s Session'}
+        </h1>
         <p className="page-subtitle">
           Balanced rotation tailored to your building&apos;s gym.
         </p>

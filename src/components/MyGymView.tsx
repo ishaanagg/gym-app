@@ -7,6 +7,7 @@ import type {
   EquipmentCategory,
   Exercise,
   MovementPattern,
+  MovementPlane,
   VisualKey,
   WeightUnit,
 } from '../types/gym';
@@ -29,6 +30,17 @@ const PATTERN_TO_VISUAL: Record<MovementPattern, VisualKey> = {
   stretch: 'stretch_reach',
 };
 
+function derivePlane(
+  pattern: MovementPattern,
+  orientation: 'horizontal' | 'vertical'
+): MovementPlane | undefined {
+  if (pattern === 'upper_push') return orientation === 'vertical' ? 'vertical_push' : 'horizontal_push';
+  if (pattern === 'upper_pull') return orientation === 'vertical' ? 'vertical_pull' : 'horizontal_pull';
+  if (pattern === 'lower_squat') return 'squat';
+  if (pattern === 'lower_hinge') return 'hinge';
+  return undefined;
+}
+
 export const MyGymView: React.FC<MyGymViewProps> = ({
   equipment,
   exercises,
@@ -41,6 +53,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
   const [exName, setExName] = useState('');
   const [exPattern, setExPattern] = useState<MovementPattern>('upper_push');
   const [exCue, setExCue] = useState('');
+  const [exOrientation, setExOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
 
   const openEditor = (item?: Equipment) => {
     const target: Equipment = item ?? {
@@ -98,6 +111,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
       equipmentId: addingExerciseFor.id,
       block,
       pattern: exPattern,
+      plane: derivePlane(exPattern, exOrientation),
       repRange: [8, 12],
       visualKey: PATTERN_TO_VISUAL[exPattern],
       safetyCues: [
@@ -110,6 +124,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
     setAddingExerciseFor(null);
     setExName('');
     setExCue('');
+    setExOrientation('horizontal');
   };
 
   const toggleAvailable = async (item: Equipment) => {
@@ -373,6 +388,26 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
                 <option value="core">Abs &amp; Core</option>
               </select>
             </div>
+
+            {(exPattern === 'upper_push' || exPattern === 'upper_pull') && (
+              <div>
+                <label className="section-label" style={{ display: 'block', marginBottom: 6 }}>
+                  Direction
+                </label>
+                <select
+                  className="input-field"
+                  value={exOrientation}
+                  onChange={(e) => setExOrientation(e.target.value as 'horizontal' | 'vertical')}
+                >
+                  <option value="horizontal">
+                    Horizontal ({exPattern === 'upper_push' ? 'chest press' : 'row'})
+                  </option>
+                  <option value="vertical">
+                    Vertical ({exPattern === 'upper_push' ? 'overhead press' : 'pulldown'})
+                  </option>
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="section-label" style={{ display: 'block', marginBottom: 6 }}>

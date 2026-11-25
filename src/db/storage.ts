@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { mergeExercisesWithDefaults } from './backfill';
 import { DEFAULT_EXERCISES } from '../data/defaultExercises';
 import { DEFAULT_EQUIPMENT, DEFAULT_GYM_ID } from '../data/defaultInventory';
 import type {
@@ -102,12 +103,15 @@ class IndexedDBStorageRepository implements StorageRepository {
       }));
     }
 
-    let exercises = await db.getAll('exercises');
-    if (exercises.length === 0) {
+    const storedExercises = await db.getAll('exercises');
+    const { merged: exercises, changed } = mergeExercisesWithDefaults(
+      storedExercises,
+      DEFAULT_EXERCISES
+    );
+    if (changed.length > 0) {
       const tx = db.transaction('exercises', 'readwrite');
-      await Promise.all(DEFAULT_EXERCISES.map((ex) => tx.store.put(ex)));
+      await Promise.all(changed.map((ex) => tx.store.put(ex)));
       await tx.done;
-      exercises = DEFAULT_EXERCISES;
     }
 
     const sessions = (await db.getAll('sessions'))

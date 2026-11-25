@@ -170,9 +170,9 @@ export function App() {
     <div className="app-shell">
       <header className="app-header">
         <div className="brand-mark">
-          <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="GymCoPilot" width={30} height={30} />
+          <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Kinetic" width={30} height={30} />
           <div>
-            <div className="brand-title">GymCoPilot</div>
+            <div className="brand-title">Kinetic</div>
             <div className="brand-sub">Building Gym · lbs</div>
           </div>
         </div>
@@ -199,6 +199,7 @@ export function App() {
             onChangeDuration={handleChangeDuration}
             session={plannedSession}
             inProgressSession={inProgressSession}
+            recentSessions={sessions}
             equipment={equipment}
             exercises={exercises}
             onRegenerate={handleRegenerate}

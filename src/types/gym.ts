@@ -12,6 +12,29 @@ export type MovementPattern =
   | 'mobility'
   | 'stretch';
 
+/** Strength movement plane used to balance sessions against recent history. */
+export type MovementPlane =
+  | 'horizontal_push'
+  | 'vertical_push'
+  | 'horizontal_pull'
+  | 'vertical_pull'
+  | 'squat'
+  | 'hinge';
+
+/** Optional muscle tags reserved for V2/V3 (calibration, photo detection). Not used in V1 scoring. */
+export type MuscleGroup =
+  | 'chest'
+  | 'shoulders'
+  | 'triceps'
+  | 'lats'
+  | 'mid_back'
+  | 'rear_delts'
+  | 'biceps'
+  | 'quads'
+  | 'glutes'
+  | 'hamstrings'
+  | 'core';
+
 export type BlockType = 'warmup' | 'strength' | 'core' | 'cardio' | 'stretch';
 
 export type SessionDuration = 20 | 30 | 45 | 60;
@@ -51,6 +74,9 @@ export interface Exercise {
   equipmentId: string;
   block: BlockType;
   pattern: MovementPattern;
+  /** Optional; falls back to a default derived from `pattern` via resolvePlane(). */
+  plane?: MovementPlane;
+  primaryMuscles?: MuscleGroup[];
   repRange: [number, number];
   /** Used for timed exercises (warmup, cardio, stretches, planks). */
   durationSec?: number;

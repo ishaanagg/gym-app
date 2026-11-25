@@ -15,6 +15,7 @@ interface TodayViewProps {
   onChangeDuration: (d: SessionDuration) => void;
   session: WorkoutSession;
   inProgressSession: WorkoutSession | null;
+  recentSessions: WorkoutSession[];
   equipment: Equipment[];
   exercises: Exercise[];
   onRegenerate: () => void;
@@ -31,6 +32,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
   onChangeDuration,
   session,
   inProgressSession,
+  recentSessions,
   equipment,
   exercises,
   onRegenerate,
@@ -54,7 +56,8 @@ export const TodayView: React.FC<TodayViewProps> = ({
         swapTarget.blockType,
         session,
         equipment,
-        exercises
+        exercises,
+        recentSessions
       )
     : [];
 

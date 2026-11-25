@@ -12,6 +12,14 @@ import type {
   WorkoutBlock,
   WorkoutSession,
 } from '../types/gym';
+import {
+  chooseLowerPattern,
+  computePlaneRecency,
+  emptyPlaneScores,
+  getRecentActiveExerciseIds,
+  pickBalancedExercise,
+  resolvePlane,
+} from './balance';
 
 function uid(prefix: string, rng: () => number = Math.random): string {
   return `${prefix}-${Math.floor(rng() * 1e9).toString(36)}`;
@@ -124,19 +132,6 @@ export function buildPlannedExercise(
   };
 }
 
-function getRecentlyUsedExerciseIds(sessions: WorkoutSession[], lookback = 2): Set<string> {
-  const recent = new Set<string>();
-  const completed = sessions.filter((s) => Boolean(s.completedAt)).slice(0, lookback);
-  for (const session of completed) {
-    for (const block of session.blocks) {
-      for (const ex of block.exercises) {
-        recent.add(ex.exerciseId);
-      }
-    }
-  }
-  return recent;
-}
-
 function pickRotatedExercise(
   candidates: Exercise[],
   recentIds: Set<string>,
@@ -152,15 +147,38 @@ function pickRotatedExercise(
   return pool[idx];
 }
 
+type StrengthSlot = MovementPattern | 'lower_any';
+
+const STRENGTH_SLOTS: Record<SessionDuration, StrengthSlot[]> = {
+  // 20-min has one lower slot: pick squat vs hinge by whichever was trained less recently.
+  20: ['upper_push', 'upper_pull', 'lower_any'],
+  30: ['upper_push', 'upper_pull', 'lower_squat', 'lower_hinge'],
+  45: ['upper_push', 'upper_pull', 'lower_squat', 'lower_hinge'],
+  // Doubled push/pull: the in-session running score forces the opposite plane on the 2nd pick.
+  60: ['upper_push', 'upper_pull', 'lower_squat', 'upper_push', 'upper_pull', 'lower_hinge'],
+};
+
+const BLOCK_CONFIG: Record<
+  SessionDuration,
+  { warmupCount: number; strengthSets: number; coreCount: number; cardioMin: number; stretchCount: number }
+> = {
+  20: { warmupCount: 1, strengthSets: 2, coreCount: 1, cardioMin: 3, stretchCount: 1 },
+  30: { warmupCount: 2, strengthSets: 2, coreCount: 1, cardioMin: 4, stretchCount: 1 },
+  45: { warmupCount: 2, strengthSets: 3, coreCount: 2, cardioMin: 6, stretchCount: 2 },
+  60: { warmupCount: 3, strengthSets: 3, coreCount: 2, cardioMin: 8, stretchCount: 2 },
+};
+
 export function generateWorkoutSession(
   durationMin: SessionDuration,
   equipmentList: Equipment[],
   exerciseList: Exercise[],
   recentSessions: WorkoutSession[],
   progressMap: Record<string, ExerciseProgress>,
-  rng: () => number = Math.random
+  rng: () => number = Math.random,
+  now: () => Date = () => new Date()
 ): WorkoutSession {
   const equipmentMap = new Map(equipmentList.map((e) => [e.id, e]));
+  const exerciseMap = new Map(exerciseList.map((e) => [e.id, e]));
   const availableEquipmentIds = new Set(
     equipmentList.filter((e) => e.isAvailable).map((e) => e.id)
   );
@@ -168,63 +186,28 @@ export function generateWorkoutSession(
     availableEquipmentIds.has(ex.equipmentId)
   );
 
-  const recentIds = getRecentlyUsedExerciseIds(recentSessions, 2);
+  const recentIds = getRecentActiveExerciseIds(recentSessions, 2);
+  const planeHistory = computePlaneRecency(recentSessions, exerciseMap);
+  const sessionPicks = emptyPlaneScores();
   const pickedIds = new Set<string>();
-
-  const config = {
-    20: {
-      warmupCount: 1,
-      strengthSets: 2,
-      strengthPatterns: ['upper_push', 'upper_pull', 'lower_squat'] as MovementPattern[],
-      coreCount: 1,
-      cardioMin: 3,
-      stretchCount: 1,
-    },
-    30: {
-      warmupCount: 2,
-      strengthSets: 2,
-      strengthPatterns: ['upper_push', 'upper_pull', 'lower_squat', 'lower_hinge'] as MovementPattern[],
-      coreCount: 1,
-      cardioMin: 4,
-      stretchCount: 1,
-    },
-    45: {
-      warmupCount: 2,
-      strengthSets: 3,
-      strengthPatterns: ['upper_push', 'upper_pull', 'lower_squat', 'lower_hinge'] as MovementPattern[],
-      coreCount: 2,
-      cardioMin: 6,
-      stretchCount: 2,
-    },
-    60: {
-      warmupCount: 3,
-      strengthSets: 3,
-      strengthPatterns: [
-        'upper_push',
-        'upper_pull',
-        'lower_squat',
-        'upper_push',
-        'upper_pull',
-        'lower_hinge',
-      ] as MovementPattern[],
-      coreCount: 2,
-      cardioMin: 8,
-      stretchCount: 2,
-    },
-  }[durationMin];
+  const config = BLOCK_CONFIG[durationMin];
 
   const blocks: WorkoutBlock[] = [];
 
-  // 1. Warm-up / Mobility
-  const warmupExercises: PlannedExercise[] = [];
-  const warmupPool = eligibleExercises.filter((e) => e.block === 'warmup');
-  for (let i = 0; i < config.warmupCount; i++) {
-    const chosen = pickRotatedExercise(warmupPool, recentIds, pickedIds, rng);
-    if (chosen) {
+  const pickSimpleBlock = (block: BlockType, count: number, sets: number): PlannedExercise[] => {
+    const pool = eligibleExercises.filter((e) => e.block === block);
+    const out: PlannedExercise[] = [];
+    for (let i = 0; i < count; i++) {
+      const chosen = pickRotatedExercise(pool, recentIds, pickedIds, rng);
+      if (!chosen) break;
       pickedIds.add(chosen.id);
-      warmupExercises.push(buildPlannedExercise(chosen, equipmentMap, progressMap, 1, rng));
+      out.push(buildPlannedExercise(chosen, equipmentMap, progressMap, sets, rng));
     }
-  }
+    return out;
+  };
+
+  // 1. Warm-up / Mobility
+  const warmupExercises = pickSimpleBlock('warmup', config.warmupCount, 1);
   if (warmupExercises.length > 0) {
     blocks.push({
       type: 'warmup',
@@ -234,19 +217,27 @@ export function generateWorkoutSession(
     });
   }
 
-  // 2. Strength Stations (alternating Push / Pull / Lower)
+  // 2. Strength Stations — balanced against the previous 2 sessions by movement plane
   const strengthExercises: PlannedExercise[] = [];
   const strengthPool = eligibleExercises.filter((e) => e.block === 'strength');
 
-  for (const pattern of config.strengthPatterns) {
-    const candidates = strengthPool.filter((e) => e.pattern === pattern);
-    const chosen = pickRotatedExercise(candidates, recentIds, pickedIds, rng);
-    if (chosen) {
-      pickedIds.add(chosen.id);
-      strengthExercises.push(
-        buildPlannedExercise(chosen, equipmentMap, progressMap, config.strengthSets, rng)
-      );
+  for (const slot of STRENGTH_SLOTS[durationMin]) {
+    const pattern: MovementPattern =
+      slot === 'lower_any' ? chooseLowerPattern(planeHistory, sessionPicks) : slot;
+    let candidates = strengthPool.filter((e) => e.pattern === pattern && !pickedIds.has(e.id));
+    if (candidates.length === 0 && slot === 'lower_any') {
+      // Fall back to the other lower pattern if equipment for the preferred one is unavailable
+      const other = pattern === 'lower_squat' ? 'lower_hinge' : 'lower_squat';
+      candidates = strengthPool.filter((e) => e.pattern === other && !pickedIds.has(e.id));
     }
+    const chosen = pickBalancedExercise(candidates, recentIds, planeHistory, sessionPicks, rng);
+    if (!chosen) continue;
+    pickedIds.add(chosen.id);
+    const plane = resolvePlane(chosen);
+    if (plane) sessionPicks[plane] += 1;
+    strengthExercises.push(
+      buildPlannedExercise(chosen, equipmentMap, progressMap, config.strengthSets, rng)
+    );
   }
 
   if (strengthExercises.length > 0) {
@@ -259,15 +250,7 @@ export function generateWorkoutSession(
   }
 
   // 3. Abs / Core
-  const coreExercises: PlannedExercise[] = [];
-  const corePool = eligibleExercises.filter((e) => e.block === 'core');
-  for (let i = 0; i < config.coreCount; i++) {
-    const chosen = pickRotatedExercise(corePool, recentIds, pickedIds, rng);
-    if (chosen) {
-      pickedIds.add(chosen.id);
-      coreExercises.push(buildPlannedExercise(chosen, equipmentMap, progressMap, 2, rng));
-    }
-  }
+  const coreExercises = pickSimpleBlock('core', config.coreCount, 2);
   if (coreExercises.length > 0) {
     blocks.push({
       type: 'core',
@@ -278,28 +261,18 @@ export function generateWorkoutSession(
   }
 
   // 4. Cardio Cooldown
-  const cardioPool = eligibleExercises.filter((e) => e.block === 'cardio');
-  const cardioChosen = pickRotatedExercise(cardioPool, recentIds, pickedIds, rng);
-  if (cardioChosen) {
-    pickedIds.add(cardioChosen.id);
+  const cardioExercises = pickSimpleBlock('cardio', 1, 1);
+  if (cardioExercises.length > 0) {
     blocks.push({
       type: 'cardio',
       title: 'Cardio Cooldown',
       estimatedMinutes: config.cardioMin,
-      exercises: [buildPlannedExercise(cardioChosen, equipmentMap, progressMap, 1, rng)],
+      exercises: cardioExercises,
     });
   }
 
   // 5. Stretching / Flexibility
-  const stretchExercises: PlannedExercise[] = [];
-  const stretchPool = eligibleExercises.filter((e) => e.block === 'stretch');
-  for (let i = 0; i < config.stretchCount; i++) {
-    const chosen = pickRotatedExercise(stretchPool, recentIds, pickedIds, rng);
-    if (chosen) {
-      pickedIds.add(chosen.id);
-      stretchExercises.push(buildPlannedExercise(chosen, equipmentMap, progressMap, 1, rng));
-    }
-  }
+  const stretchExercises = pickSimpleBlock('stretch', config.stretchCount, 1);
   if (stretchExercises.length > 0) {
     blocks.push({
       type: 'stretch',
@@ -313,18 +286,23 @@ export function generateWorkoutSession(
     id: uid('session', rng),
     gymId: DEFAULT_GYM_ID,
     status: 'planned',
-    createdAt: new Date().toISOString(),
+    createdAt: now().toISOString(),
     durationMin,
     blocks,
   };
 }
 
+/**
+ * Swap candidates for an occupied machine. When recentSessions is provided, candidates are
+ * ordered to preserve balance: same plane first, then not recently used, then lowest plane score.
+ */
 export function getSwapCandidates(
   currentExercise: Exercise,
   blockType: BlockType,
   currentSession: WorkoutSession,
   equipmentList: Equipment[],
-  exerciseList: Exercise[]
+  exerciseList: Exercise[],
+  recentSessions?: WorkoutSession[]
 ): Exercise[] {
   const availableEq = new Set(equipmentList.filter((e) => e.isAvailable).map((e) => e.id));
   const usedIds = new Set<string>();
@@ -332,13 +310,35 @@ export function getSwapCandidates(
     for (const pe of b.exercises) usedIds.add(pe.exerciseId);
   }
 
-  return exerciseList.filter((ex) => {
+  const candidates = exerciseList.filter((ex) => {
     if (!availableEq.has(ex.equipmentId)) return false;
     if (ex.id === currentExercise.id || usedIds.has(ex.id)) return false;
     if (blockType === 'strength') {
       return ex.block === 'strength' && ex.pattern === currentExercise.pattern;
     }
     return ex.block === blockType;
+  });
+
+  if (!recentSessions) return candidates;
+
+  const exerciseMap = new Map(exerciseList.map((e) => [e.id, e]));
+  const recentIds = getRecentActiveExerciseIds(recentSessions, 2);
+  const history = computePlaneRecency(recentSessions, exerciseMap);
+  const currentPlane = resolvePlane(currentExercise);
+
+  const rank = (ex: Exercise): [number, number, number] => {
+    const plane = resolvePlane(ex);
+    return [
+      plane === currentPlane ? 0 : 1,
+      recentIds.has(ex.id) ? 1 : 0,
+      plane ? history[plane] : 0,
+    ];
+  };
+
+  return [...candidates].sort((a, b) => {
+    const ra = rank(a);
+    const rb = rank(b);
+    return ra[0] - rb[0] || ra[1] - rb[1] || ra[2] - rb[2];
   });
 }
 

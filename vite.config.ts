@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'GymCoPilot — Building Gym Trainer',
-        short_name: 'GymCoPilot',
+        name: 'Kinetic — Building Gym Trainer',
+        short_name: 'Kinetic',
         description: 'Time-boxed functional workouts tailored to your building gym.',
         theme_color: '#0b0f14',
         background_color: '#0b0f14',

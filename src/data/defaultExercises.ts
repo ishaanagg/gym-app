@@ -58,6 +58,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-chest-press',
     block: 'strength',
     pattern: 'upper_push',
+    plane: 'horizontal_push',
     repRange: [8, 12],
     visualKey: 'chest_press',
     safetyCues: [
@@ -72,6 +73,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-dumbbells',
     block: 'strength',
     pattern: 'upper_push',
+    plane: 'vertical_push',
     repRange: [8, 12],
     visualKey: 'overhead_press',
     safetyCues: [
@@ -86,6 +88,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-cable',
     block: 'strength',
     pattern: 'upper_push',
+    plane: 'horizontal_push',
     repRange: [10, 14],
     visualKey: 'chest_press',
     safetyCues: [
@@ -100,6 +103,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-dumbbells',
     block: 'strength',
     pattern: 'upper_push',
+    plane: 'horizontal_push',
     repRange: [8, 12],
     visualKey: 'chest_press',
     safetyCues: [
@@ -116,6 +120,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-lat-row',
     block: 'strength',
     pattern: 'upper_pull',
+    plane: 'vertical_pull',
     repRange: [8, 12],
     visualKey: 'lat_pulldown',
     safetyCues: [
@@ -130,6 +135,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-lat-row',
     block: 'strength',
     pattern: 'upper_pull',
+    plane: 'horizontal_pull',
     repRange: [8, 12],
     visualKey: 'seated_row',
     safetyCues: [
@@ -144,6 +150,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-dumbbells',
     block: 'strength',
     pattern: 'upper_pull',
+    plane: 'horizontal_pull',
     repRange: [8, 12],
     visualKey: 'seated_row',
     safetyCues: [
@@ -158,6 +165,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-cable',
     block: 'strength',
     pattern: 'upper_pull',
+    plane: 'horizontal_pull',
     repRange: [12, 15],
     visualKey: 'seated_row',
     safetyCues: [
@@ -174,6 +182,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-leg-press',
     block: 'strength',
     pattern: 'lower_squat',
+    plane: 'squat',
     repRange: [10, 14],
     visualKey: 'squat',
     safetyCues: [
@@ -188,6 +197,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-dumbbells',
     block: 'strength',
     pattern: 'lower_squat',
+    plane: 'squat',
     repRange: [8, 12],
     visualKey: 'squat',
     safetyCues: [
@@ -202,6 +212,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-dumbbells',
     block: 'strength',
     pattern: 'lower_squat',
+    plane: 'squat',
     repRange: [8, 10],
     visualKey: 'squat',
     safetyCues: [
@@ -218,6 +229,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-dumbbells',
     block: 'strength',
     pattern: 'lower_hinge',
+    plane: 'hinge',
     repRange: [8, 12],
     visualKey: 'hinge',
     safetyCues: [
@@ -232,6 +244,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-cable',
     block: 'strength',
     pattern: 'lower_hinge',
+    plane: 'hinge',
     repRange: [10, 14],
     visualKey: 'hinge',
     safetyCues: [

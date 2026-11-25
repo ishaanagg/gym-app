@@ -99,10 +99,18 @@ describe('workoutGenerator', () => {
       {},
       fixedRng
     );
+    // Simulate actually performing every set (rotation only counts exercises with real activity)
     const completedFirst: WorkoutSession = {
       ...firstSession,
       status: 'completed',
       completedAt: '2026-11-24T10:00:00Z',
+      blocks: firstSession.blocks.map((b) => ({
+        ...b,
+        exercises: b.exercises.map((e) => ({
+          ...e,
+          sets: e.sets.map((s) => ({ ...s, completed: true })),
+        })),
+      })),
     };
 
     const secondSession = generateWorkoutSession(

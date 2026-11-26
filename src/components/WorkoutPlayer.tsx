@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
   Check,
@@ -7,11 +7,9 @@ import {
   Pause,
   Play,
   RotateCcw,
-  Sparkles,
   Timer,
   TrendingUp,
   Trophy,
-  X,
 } from 'lucide-react';
 import { computeUpdatedProgress, getNextTarget } from '../engine/workoutGenerator';
 import type {
@@ -27,16 +25,20 @@ import { formatClock, triggerHaptic, useWakeLock } from '../utils/ux';
 import { FormVisual } from './FormVisual';
 import { SwapModal } from './SwapModal';
 
-interface TimedSetControlProps {
+interface TimedStageProps {
   durationSec: number;
   completed: boolean;
-  onToggleComplete: (forceComplete?: boolean) => void;
+  isLastStep: boolean;
+  onCompleteAndAdvance: () => void;
+  onMarkCompletedOnly: () => void;
 }
 
-const TimedSetControl: React.FC<TimedSetControlProps> = ({
+const TimedStage: React.FC<TimedStageProps> = ({
   durationSec,
   completed,
-  onToggleComplete,
+  isLastStep,
+  onCompleteAndAdvance,
+  onMarkCompletedOnly,
 }) => {
   const [remaining, setRemaining] = useState(durationSec);
   const [running, setRunning] = useState(false);
@@ -49,77 +51,267 @@ const TimedSetControl: React.FC<TimedSetControlProps> = ({
           window.clearInterval(interval);
           setRunning(false);
           triggerHaptic([20, 60, 30]);
-          onToggleComplete(true);
+          onMarkCompletedOnly();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => window.clearInterval(interval);
-  }, [running, onToggleComplete]);
+  }, [running, onMarkCompletedOnly]);
 
   const pct = durationSec > 0 ? Math.round(((durationSec - remaining) / durationSec) * 100) : 0;
 
   return (
-    <div className="timer-box">
-      <div className="timer-readout">
-        <div>
-          <div className="section-label" style={{ marginBottom: 4 }}>
-            Guided Timer
-          </div>
-          <div className="timer-digits mono">{formatClock(remaining)}</div>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="timer-box">
+        <div className="timer-digits mono">{formatClock(remaining)}</div>
+        <div className="player-progress-track">
+          <div className="player-progress-fill" style={{ width: `${completed ? 100 : pct}%` }} />
         </div>
-        <button
-          type="button"
-          className={`confirm-set-btn ${completed ? 'done' : ''}`}
-          onClick={() => {
-            triggerHaptic(10);
-            setRunning(false);
-            onToggleComplete();
-          }}
-        >
-          <Check size={15} /> {completed ? 'Done' : 'Mark Done'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ flex: 1 }}
+            onClick={() => {
+              triggerHaptic(10);
+              if (remaining === 0) setRemaining(durationSec);
+              setRunning((r) => !r);
+            }}
+          >
+            {running ? (
+              <>
+                <Pause size={16} /> Pause
+              </>
+            ) : (
+              <>
+                <Play size={16} fill="currentColor" />{' '}
+                {remaining < durationSec && remaining > 0 ? 'Resume' : 'Start Timer'}
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '0 14px' }}
+            onClick={() => {
+              setRunning(false);
+              setRemaining(durationSec);
+            }}
+            aria-label="Reset timer"
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
       </div>
 
-      <div className="player-progress-track">
-        <div className="player-progress-fill" style={{ width: `${completed ? 100 : pct}%` }} />
-      </div>
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={() => {
+          setRunning(false);
+          onCompleteAndAdvance();
+        }}
+      >
+        <Check size={18} />
+        {isLastStep ? 'Complete & Finish Workout' : 'Done — Next Movement'}
+      </button>
+    </div>
+  );
+};
 
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button
-          type="button"
-          className={`btn ${running ? 'btn-secondary' : 'btn-primary'}`}
-          style={{ flex: 1, minHeight: 44 }}
-          onClick={() => {
-            triggerHaptic(10);
-            if (remaining === 0) setRemaining(durationSec);
-            setRunning((r) => !r);
-          }}
-        >
-          {running ? (
-            <>
-              <Pause size={16} /> Pause
-            </>
-          ) : (
-            <>
-              <Play size={16} fill="currentColor" /> {remaining < durationSec && remaining > 0 ? 'Resume' : 'Start Timer'}
-            </>
+interface StrengthStageProps {
+  planned: PlannedExercise;
+  exercise: Exercise;
+  equipment?: Equipment;
+  restSeconds: number;
+  onAddRest: () => void;
+  onClearRest: () => void;
+  onStepWeight: (setNumber: number, delta: -1 | 1) => void;
+  onStepReps: (setNumber: number, delta: -1 | 1) => void;
+  onCompleteSet: (setNumber: number) => void;
+  onRateEffortAndAdvance: (effort: EffortRating) => void;
+}
+
+const StrengthStage: React.FC<StrengthStageProps> = ({
+  planned,
+  exercise,
+  equipment,
+  restSeconds,
+  onAddRest,
+  onClearRest,
+  onStepWeight,
+  onStepReps,
+  onCompleteSet,
+  onRateEffortAndAdvance,
+}) => {
+  const firstIncomplete = planned.sets.find((s) => !s.completed)?.setNumber ?? planned.sets.length;
+  const [selectedSetNum, setSelectedSetNum] = useState<number>(firstIncomplete);
+
+  const activeSet =
+    planned.sets.find((s) => s.setNumber === selectedSetNum) ?? planned.sets[0];
+  const allSetsDone = planned.sets.every((s) => s.completed);
+  const hasWeights = (equipment?.weightOptions.length ?? 0) > 0;
+  const unit = equipment?.weightUnit ?? 'lbs';
+
+  const handleConfirmCurrentSet = () => {
+    onCompleteSet(activeSet.setNumber);
+    const nextIncomplete = planned.sets.find(
+      (s) => s.setNumber > activeSet.setNumber && !s.completed
+    );
+    if (nextIncomplete) {
+      setSelectedSetNum(nextIncomplete.setNumber);
+    }
+  };
+
+  return (
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Compact Set Selector Pills */}
+      {planned.sets.length > 1 && (
+        <div className="set-pills" role="tablist" aria-label="Sets">
+          {planned.sets.map((s) => {
+            const isSelected = s.setNumber === activeSet.setNumber && !allSetsDone;
+            return (
+              <button
+                key={s.setNumber}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                className={`set-pill ${s.completed ? 'done' : ''} ${isSelected ? 'active' : ''}`}
+                onClick={() => setSelectedSetNum(s.setNumber)}
+              >
+                {s.completed && <Check size={13} />}
+                <span>Set {s.setNumber}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Single Active-Set Dials */}
+      {!allSetsDone ? (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span className="section-label">Set {activeSet.setNumber}</span>
+            <span className="exercise-meta mono">
+              Target {exercise.repRange[0]}–{exercise.repRange[1]} reps
+            </span>
+          </div>
+
+          <div className={`dial-grid ${hasWeights ? '' : 'single'}`}>
+            {hasWeights && (
+              <div className="dial-box">
+                <button
+                  type="button"
+                  className="dial-btn"
+                  onClick={() => onStepWeight(activeSet.setNumber, -1)}
+                  aria-label="Decrease weight"
+                >
+                  −
+                </button>
+                <div className="dial-readout mono">
+                  <span className="dial-number">{activeSet.actualWeight}</span>
+                  <span className="dial-unit">{unit}</span>
+                </div>
+                <button
+                  type="button"
+                  className="dial-btn"
+                  onClick={() => onStepWeight(activeSet.setNumber, 1)}
+                  aria-label="Increase weight"
+                >
+                  +
+                </button>
+              </div>
+            )}
+
+            <div className="dial-box">
+              <button
+                type="button"
+                className="dial-btn"
+                onClick={() => onStepReps(activeSet.setNumber, -1)}
+                aria-label="Decrease reps"
+              >
+                −
+              </button>
+              <div className="dial-readout mono">
+                <span className="dial-number">{activeSet.actualReps}</span>
+                <span className="dial-unit">reps</span>
+              </div>
+              <button
+                type="button"
+                className="dial-btn"
+                onClick={() => onStepReps(activeSet.setNumber, 1)}
+                aria-label="Increase reps"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {restSeconds > 0 && (
+            <div className="rest-pill" role="status" aria-live="polite">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Timer size={15} color="var(--accent-emerald-bright)" />
+                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                  Rest <span className="mono">{formatClock(restSeconds)}</span>
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button type="button" className="btn-ghost" onClick={onAddRest}>
+                  +15s
+                </button>
+                <button type="button" className="btn-ghost" onClick={onClearRest}>
+                  Dismiss
+                </button>
+              </div>
+            </div>
           )}
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ minHeight: 44, padding: '0 14px' }}
-          onClick={() => {
-            setRunning(false);
-            setRemaining(durationSec);
-          }}
-          aria-label="Reset timer"
-        >
-          <RotateCcw size={16} />
-        </button>
-      </div>
+
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleConfirmCurrentSet}
+          >
+            <Check size={18} />
+            Complete Set {activeSet.setNumber}
+          </button>
+        </>
+      ) : (
+        /* Progressive Disclosure: Effort Rating appears cleanly once sets are done */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span className="section-label" style={{ color: 'var(--accent-emerald-bright)' }}>
+              All {planned.sets.length} Sets Done · How did that feel?
+            </span>
+            <span className="mono" style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              {hasWeights
+                ? `${activeSet.actualWeight} ${unit} × ${activeSet.actualReps}`
+                : `${activeSet.actualReps} reps`}
+            </span>
+          </div>
+          <div className="effort-grid">
+            {(
+              [
+                { id: 'easy', label: 'Easy' },
+                { id: 'just_right', label: 'Just Right' },
+                { id: 'too_hard', label: 'Too Hard' },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                className={`effort-btn ${
+                  planned.effort === opt.id ? `selected-${opt.id}` : ''
+                }`}
+                onClick={() => onRateEffortAndAdvance(opt.id)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -177,8 +369,14 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
   const [showExitSheet, setShowExitSheet] = useState(false);
   const [showSwapSheet, setShowSwapSheet] = useState(false);
   const [restSeconds, setRestSeconds] = useState<number>(0);
+  const advanceTimerRef = useRef<number | null>(null);
 
-  // Rest countdown ticker
+  useEffect(() => {
+    return () => {
+      if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     if (restSeconds <= 0) return;
     const t = window.setInterval(() => {
@@ -200,13 +398,14 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
   const progressPct = steps.length > 0 ? Math.round(((stepIdx + 1) / steps.length) * 100) : 0;
 
   const goToStep = (nextIdx: number) => {
+    if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
     setRestSeconds(0);
     setStepIdx(nextIdx);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const updatePlannedExercise = (updater: (pe: PlannedExercise) => PlannedExercise) => {
-    if (!currentStep) return;
+  const applyExerciseUpdate = (updater: (pe: PlannedExercise) => PlannedExercise): WorkoutSession | null => {
+    if (!currentStep) return null;
     const updated: WorkoutSession = {
       ...session,
       blocks: session.blocks.map((b) =>
@@ -221,6 +420,7 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
       ),
     };
     onUpdateSession(updated);
+    return updated;
   };
 
   const stepWeight = (setNumber: number, delta: -1 | 1) => {
@@ -228,21 +428,30 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
     if (weights.length === 0) return;
     triggerHaptic(6);
 
-    updatePlannedExercise((pe) => ({
-      ...pe,
-      sets: pe.sets.map((s) => {
-        if (s.setNumber !== setNumber) return s;
-        const idx = weights.indexOf(s.actualWeight);
-        const curIdx = idx >= 0 ? idx : 0;
-        const nextIdx = Math.min(weights.length - 1, Math.max(0, curIdx + delta));
-        return { ...s, actualWeight: weights[nextIdx] };
-      }),
-    }));
+    applyExerciseUpdate((pe) => {
+      const target = pe.sets.find((s) => s.setNumber === setNumber);
+      if (!target) return pe;
+      const idx = weights.indexOf(target.actualWeight);
+      const curIdx = idx >= 0 ? idx : 0;
+      const nextWeight = weights[Math.min(weights.length - 1, Math.max(0, curIdx + delta))];
+
+      return {
+        ...pe,
+        sets: pe.sets.map((s) => {
+          if (s.setNumber === setNumber) return { ...s, actualWeight: nextWeight };
+          // Smart carry-forward: update subsequent uncompleted sets so user dials weight once
+          if (s.setNumber > setNumber && !s.completed) {
+            return { ...s, actualWeight: nextWeight };
+          }
+          return s;
+        }),
+      };
+    });
   };
 
   const stepReps = (setNumber: number, delta: -1 | 1) => {
     triggerHaptic(6);
-    updatePlannedExercise((pe) => ({
+    applyExerciseUpdate((pe) => ({
       ...pe,
       sets: pe.sets.map((s) =>
         s.setNumber !== setNumber
@@ -252,44 +461,27 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
     }));
   };
 
-  const toggleSetCompleted = (setNumber: number, forceComplete?: boolean) => {
+  const completeSingleSet = (setNumber: number) => {
     if (!currentStep || !currentExercise) return;
-    const targetSet = currentStep.planned.sets.find((s) => s.setNumber === setNumber);
-    const nextCompleted = forceComplete ?? !targetSet?.completed;
     triggerHaptic(12);
-
-    updatePlannedExercise((pe) => ({
+    applyExerciseUpdate((pe) => ({
       ...pe,
-      sets: pe.sets.map((s) =>
-        s.setNumber !== setNumber ? s : { ...s, completed: nextCompleted }
-      ),
+      sets: pe.sets.map((s) => (s.setNumber === setNumber ? { ...s, completed: true } : s)),
     }));
 
-    // Start a non-blocking 60s rest cue if more sets remain on a non-timed exercise
-    if (
-      nextCompleted &&
-      !currentExercise.isTimed &&
-      setNumber < currentStep.planned.sets.length
-    ) {
+    const remainingIncomplete = currentStep.planned.sets.filter(
+      (s) => s.setNumber !== setNumber && !s.completed
+    ).length;
+    if (remainingIncomplete > 0) {
       setRestSeconds(60);
-    } else if (!nextCompleted) {
+    } else {
       setRestSeconds(0);
     }
   };
 
-  const setEffort = (effort: EffortRating) => {
-    triggerHaptic(14);
-    setRestSeconds(0);
-    updatePlannedExercise((pe) => ({
-      ...pe,
-      effort,
-      sets: pe.sets.map((s) => ({ ...s, completed: true })),
-    }));
-  };
-
-  const finalizeSession = () => {
+  const finalizeWithSession = (baseSession: WorkoutSession) => {
     const completed: WorkoutSession = {
-      ...session,
+      ...baseSession,
       completedAt: new Date().toISOString(),
     };
     onFinishWorkout(completed);
@@ -299,13 +491,37 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleNext = () => {
-    triggerHaptic(10);
+  const advanceOrFinish = (latestSession: WorkoutSession) => {
     if (stepIdx < steps.length - 1) {
       goToStep(stepIdx + 1);
     } else {
-      finalizeSession();
+      finalizeWithSession(latestSession);
     }
+  };
+
+  const handleRateEffortAndAdvance = (effort: EffortRating) => {
+    triggerHaptic(14);
+    setRestSeconds(0);
+    const updated = applyExerciseUpdate((pe) => ({
+      ...pe,
+      effort,
+      sets: pe.sets.map((s) => ({ ...s, completed: true })),
+    }));
+    if (!updated) return;
+
+    if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
+    advanceTimerRef.current = window.setTimeout(() => {
+      advanceOrFinish(updated);
+    }, 220);
+  };
+
+  const handleCompleteTimedAndAdvance = () => {
+    triggerHaptic(12);
+    const updated = applyExerciseUpdate((pe) => ({
+      ...pe,
+      sets: pe.sets.map((s) => ({ ...s, completed: true })),
+    }));
+    if (updated) advanceOrFinish(updated);
   };
 
   if (isCompletedView) {
@@ -332,7 +548,7 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div className="card" style={{ textAlign: 'center', padding: '28px 18px' }}>
+        <div className="card" style={{ textAlign: 'center', padding: '32px 20px' }}>
           <div
             style={{
               width: 58,
@@ -348,9 +564,9 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
           >
             <Trophy size={28} />
           </div>
-          <h1 className="page-title">Workout Complete</h1>
-          <p className="page-subtitle" style={{ marginBottom: 20 }}>
-            You completed <span className="mono">{totalSets}</span> sets across{' '}
+          <h1 className="page-title">Session Complete</h1>
+          <p className="page-subtitle" style={{ marginBottom: 22 }}>
+            <span className="mono">{totalSets}</span> sets completed across{' '}
             <span className="mono">{steps.length}</span> movements.
           </p>
           <button type="button" className="btn btn-primary" onClick={onExit}>
@@ -362,7 +578,7 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
           <div className="card">
             <div className="card-header" style={{ marginBottom: 8 }}>
               <span className="section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <TrendingUp size={14} /> Next Time Targets
+                <TrendingUp size={14} /> Next Session Targets
               </span>
             </div>
             {levelUps.map((item) => (
@@ -381,30 +597,33 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
     return null;
   }
 
-  const hasWeights = (currentEquipment?.weightOptions.length ?? 0) > 0;
-  const anyWorkLogged =
-    Boolean(currentStep.planned.effort) || currentStep.planned.sets.some((s) => s.completed);
-  const readyForNext =
-    currentStep.planned.sets.every((s) => s.completed) && Boolean(currentStep.planned.effort);
+  // Only Strength & non-timed Core ask for Effort; Warm-up, Cardio, Stretch & Timed Planks complete in 1 tap.
+  const isTimedFlow =
+    Boolean(currentExercise.isTimed) ||
+    currentStep.blockType === 'warmup' ||
+    currentStep.blockType === 'cardio' ||
+    currentStep.blockType === 'stretch';
+
   const isLastStep = stepIdx === steps.length - 1;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      {/* Top Player Bar */}
+      {/* Clean Chrome-Free Player Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <button type="button" className="btn-ghost" onClick={() => setShowExitSheet(true)}>
-          <X size={16} /> Pause
+          Pause
         </button>
         <span className="section-label" style={{ textAlign: 'center' }}>
           {currentStep.blockTitle} · {stepIdx + 1}/{steps.length}
         </span>
         <button
           type="button"
-          className="btn-ghost"
+          className="icon-btn"
           onClick={() => setShowSwapSheet(true)}
           aria-label={`Swap ${currentExercise.name}`}
+          title={`Swap ${currentExercise.name}`}
         >
-          <ArrowLeftRight size={14} /> Swap
+          <ArrowLeftRight size={15} />
         </button>
       </div>
 
@@ -412,211 +631,81 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
         <div className="player-progress-fill" style={{ width: `${progressPct}%` }} />
       </div>
 
-      {/* Exercise Header + Form Visual + Safety Cues */}
+      {/* Movement Posture & Cues */}
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: 4 }}>
             <span className="badge badge-slate">{currentEquipment?.name}</span>
             {currentStep.planned.isFirstTime && currentStep.blockType === 'strength' && (
-              <span className="badge badge-amber">
-                <Sparkles size={11} /> First time — adjust to a comfortable weight
-              </span>
+              <span className="badge badge-amber">Start comfortable — we&apos;ll tune from here</span>
             )}
           </div>
-          <h1 className="page-title" style={{ marginTop: 2 }}>
+          <h1 className="page-title" style={{ marginTop: 4 }}>
             {currentExercise.name}
           </h1>
         </div>
 
         <FormVisual visualKey={currentExercise.visualKey} label={currentExercise.name} />
 
-        <div>
-          <div className="section-label" style={{ marginBottom: 6 }}>
-            Safety &amp; Form Cues
-          </div>
-          <ul className="cue-list">
-            {currentExercise.safetyCues.map((cue, idx) => (
-              <li key={idx}>{cue}</li>
-            ))}
-          </ul>
-        </div>
+        <ul className="cue-list">
+          {currentExercise.safetyCues.map((cue, idx) => (
+            <li key={idx}>{cue}</li>
+          ))}
+        </ul>
       </div>
 
-      {/* Set / Timer Logging */}
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div className="card-header" style={{ marginBottom: 0 }}>
-          <span className="section-label">
-            {currentExercise.isTimed ? 'Timer' : 'Sets'}
-          </span>
-          {!currentExercise.isTimed && (
-            <span className="exercise-meta mono">
-              Aim for {currentExercise.repRange[0]}–{currentExercise.repRange[1]} reps
-            </span>
-          )}
-        </div>
+      {/* Focused Action Stage */}
+      {isTimedFlow ? (
+        <TimedStage
+          key={currentStep.planned.instanceId}
+          durationSec={currentExercise.durationSec ?? 60}
+          completed={currentStep.planned.sets[0]?.completed ?? false}
+          isLastStep={isLastStep}
+          onCompleteAndAdvance={handleCompleteTimedAndAdvance}
+          onMarkCompletedOnly={() => {
+            applyExerciseUpdate((pe) => ({
+              ...pe,
+              sets: pe.sets.map((s) => ({ ...s, completed: true })),
+            }));
+          }}
+        />
+      ) : (
+        <StrengthStage
+          key={currentStep.planned.instanceId}
+          planned={currentStep.planned}
+          exercise={currentExercise}
+          equipment={currentEquipment}
+          restSeconds={restSeconds}
+          onAddRest={() => setRestSeconds((s) => s + 15)}
+          onClearRest={() => setRestSeconds(0)}
+          onStepWeight={stepWeight}
+          onStepReps={stepReps}
+          onCompleteSet={completeSingleSet}
+          onRateEffortAndAdvance={handleRateEffortAndAdvance}
+        />
+      )}
 
-        {currentExercise.isTimed ? (
-          <TimedSetControl
-            key={currentStep.planned.instanceId}
-            durationSec={currentExercise.durationSec ?? 60}
-            completed={currentStep.planned.sets[0]?.completed ?? false}
-            onToggleComplete={(force) => toggleSetCompleted(1, force)}
-          />
-        ) : (
-          currentStep.planned.sets.map((s) => (
-            <div key={s.setNumber} className={`set-card ${s.completed ? 'completed' : ''}`}>
-              <div className="set-card-top">
-                <span className="mono" style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                  Set {s.setNumber} of {currentStep.planned.sets.length}
-                </span>
-                <button
-                  type="button"
-                  className={`confirm-set-btn ${s.completed ? 'done' : ''}`}
-                  onClick={() => toggleSetCompleted(s.setNumber)}
-                >
-                  <Check size={15} /> {s.completed ? 'Logged' : 'Confirm Set'}
-                </button>
-              </div>
-
-              <div className={`set-controls-grid ${hasWeights ? '' : 'single'}`}>
-                {hasWeights && (
-                  <div className="stepper-box">
-                    <button
-                      type="button"
-                      className="stepper-btn"
-                      onClick={() => stepWeight(s.setNumber, -1)}
-                      aria-label={`Decrease Set ${s.setNumber} weight`}
-                    >
-                      −
-                    </button>
-                    <div className="stepper-value mono">
-                      <span style={{ fontSize: '0.96rem', fontWeight: 700 }}>{s.actualWeight}</span>
-                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                        {currentEquipment?.weightUnit ?? 'lbs'}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="stepper-btn"
-                      onClick={() => stepWeight(s.setNumber, 1)}
-                      aria-label={`Increase Set ${s.setNumber} weight`}
-                    >
-                      +
-                    </button>
-                  </div>
-                )}
-
-                <div className="stepper-box">
-                  <button
-                    type="button"
-                    className="stepper-btn"
-                    onClick={() => stepReps(s.setNumber, -1)}
-                    aria-label={`Decrease Set ${s.setNumber} reps`}
-                  >
-                    −
-                  </button>
-                  <div className="stepper-value mono">
-                    <span style={{ fontSize: '0.96rem', fontWeight: 700 }}>{s.actualReps}</span>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>reps</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="stepper-btn"
-                    onClick={() => stepReps(s.setNumber, 1)}
-                    aria-label={`Increase Set ${s.setNumber} reps`}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-
-        {/* Non-blocking Rest Timer Pill */}
-        {restSeconds > 0 && (
-          <div className="rest-pill" role="status" aria-live="polite">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Timer size={16} color="var(--accent-emerald-bright)" />
-              <span style={{ fontSize: '0.86rem', fontWeight: 600 }}>
-                Rest <span className="mono">{formatClock(restSeconds)}</span>
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => setRestSeconds((s) => s + 15)}
-              >
-                +15s
-              </button>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => setRestSeconds(0)}
-              >
-                Skip
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Effort Rating */}
-        <div style={{ marginTop: 2 }}>
-          <div className="section-label" style={{ marginBottom: 8 }}>
-            How did it feel? <span style={{ fontWeight: 500, textTransform: 'none', color: 'var(--text-muted)' }}>(auto-confirms sets)</span>
-          </div>
-          <div className="effort-grid">
-            {(
-              [
-                { id: 'easy', label: 'Easy' },
-                { id: 'just_right', label: 'Just Right' },
-                { id: 'too_hard', label: 'Too Hard' },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                className={`effort-btn ${
-                  currentStep.planned.effort === opt.id ? `selected-${opt.id}` : ''
-                }`}
-                onClick={() => setEffort(opt.id)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Intentional Navigation Footer */}
-      <div style={{ display: 'flex', gap: '10px' }}>
+      {/* Quiet Secondary Step Navigation */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn-ghost"
           disabled={stepIdx === 0}
           onClick={() => goToStep(Math.max(0, stepIdx - 1))}
-          style={{ opacity: stepIdx === 0 ? 0.4 : 1 }}
+          style={{ opacity: stepIdx === 0 ? 0.3 : 1 }}
         >
-          <ChevronLeft size={18} /> Prev
+          <ChevronLeft size={16} /> Previous
         </button>
 
         <button
           type="button"
-          className={`btn ${readyForNext || anyWorkLogged || isLastStep ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={handleNext}
-          style={{ flex: 1 }}
+          className="btn-ghost"
+          onClick={() => advanceOrFinish(session)}
         >
-          {isLastStep
-            ? 'Finish Workout'
-            : readyForNext || anyWorkLogged
-            ? 'Next Movement'
-            : 'Skip Movement'}
-          <ChevronRight size={18} />
+          {isLastStep ? 'Finish Now' : 'Skip'} <ChevronRight size={16} />
         </button>
       </div>
 
-      {/* Mid-Workout Swap Sheet */}
       {showSwapSheet && (
         <SwapModal
           target={{
@@ -633,7 +722,6 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
         />
       )}
 
-      {/* Calm Pause / End Session Sheet */}
       {showExitSheet && (
         <div className="modal-backdrop" onClick={() => setShowExitSheet(false)}>
           <div
@@ -644,10 +732,9 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
             style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
           >
             <div className="sheet-handle" />
-            <h2 style={{ margin: 0, fontSize: '1.12rem' }}>Pause Workout?</h2>
+            <h2 style={{ margin: 0, fontSize: '1.12rem' }}>Pause Session?</h2>
             <p className="page-subtitle">
-              Every set you confirmed is saved on this device. You can resume right from{' '}
-              <strong>Today</strong> whenever you&apos;re ready.
+              Your completed sets are saved automatically. Resume anytime from <strong>Today</strong>.
             </p>
             <button
               type="button"
@@ -664,15 +751,15 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
                 onExit();
               }}
             >
-              Pause &amp; Save for Later
+              Pause for Later
             </button>
             <button
               type="button"
               className="btn-ghost"
               style={{ alignSelf: 'center', color: 'var(--accent-emerald-bright)' }}
-              onClick={finalizeSession}
+              onClick={() => finalizeWithSession(session)}
             >
-              Finish &amp; Log Completed Sets Now
+              End &amp; Save Completed Sets
             </button>
           </div>
         </div>

@@ -6,153 +6,150 @@ interface FormVisualProps {
   label?: string;
 }
 
+/**
+ * Clean, text-free architectural posture silhouettes.
+ * Slate dashed lines show the starting setup; emerald lines show the active end position;
+ * warm amber vectors indicate the controlled force/alignment path.
+ */
 export const FormVisual: React.FC<FormVisualProps> = ({ visualKey, label }) => {
   const renderDiagram = () => {
     switch (visualKey) {
       case 'chest_press':
         return (
-          <svg viewBox="0 0 240 120" width="220" height="110" fill="none" aria-label={label ?? 'Chest press posture'}>
-            {/* Bench / Seat */}
-            <path d="M52 96V64M40 96H104" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
-            <path d="M52 64L52 38" stroke="#475569" strokeWidth="6" strokeLinecap="round" />
-            {/* Torso & Head */}
-            <circle cx="64" cy="34" r="9" stroke="#E2E8F0" strokeWidth="2.5" />
-            <path d="M64 43L62 72L96 76L102 96" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            {/* Start Arm (bent) */}
-            <path d="M64 50L78 58L94 52" stroke="#64748B" strokeWidth="2.5" strokeDasharray="3 3" strokeLinecap="round" />
-            {/* End Arm (pressed) */}
-            <path d="M64 50L128 50" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" />
-            {/* Alignment / Force Arrow */}
-            <path d="M138 50H168M161 43L169 50L161 57" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="140" y="34" fill="#94A3B8" fontSize="9" fontFamily="Plus Jakarta Sans">Shoulders packed</text>
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Chest press posture'}>
+            <path d="M56 98V68M44 98H106" stroke="#263244" strokeWidth="4" strokeLinecap="round" />
+            <path d="M56 68V34" stroke="#334155" strokeWidth="6" strokeLinecap="round" />
+            <circle cx="69" cy="30" r="8.5" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M69 39L67 70L102 74L108 98" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M68 48L82 58L98 50" stroke="#64748B" strokeWidth="2.5" strokeDasharray="3 3" strokeLinecap="round" />
+            <path d="M68 48H136" stroke="#10B981" strokeWidth="4" strokeLinecap="round" />
+            <circle cx="68" cy="48" r="3" fill="#10B981" />
+            <path d="M148 48H180M173 41L181 48L173 55" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         );
 
       case 'overhead_press':
         return (
-          <svg viewBox="0 0 240 120" width="220" height="110" fill="none" aria-label={label ?? 'Overhead press posture'}>
-            {/* Standing legs & torso */}
-            <circle cx="100" cy="40" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
-            <path d="M100 48V82M100 82L90 108M100 82L110 108" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            {/* Start arms */}
-            <path d="M100 54L82 58L82 42" stroke="#64748B" strokeWidth="2.5" strokeDasharray="3 3" strokeLinecap="round" />
-            {/* End arms overhead */}
-            <path d="M100 54L114 38L114 16" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            <rect x="108" y="10" width="12" height="5" rx="2" fill="#10B981" />
-            {/* Arrow */}
-            <path d="M132 46V18M126 24L132 17L138 24" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="142" y="36" fill="#94A3B8" fontSize="9" fontFamily="Plus Jakarta Sans">Ribs down, core braced</text>
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Overhead press posture'}>
+            <line x1="64" y1="102" x2="156" y2="102" stroke="#263244" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="106" cy="38" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M106 46V78M106 78L94 102M106 78L118 102" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M106 52L88 56V40" stroke="#64748B" strokeWidth="2.5" strokeDasharray="3 3" strokeLinecap="round" />
+            <path d="M106 52L118 36V14" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <rect x="111" y="9" width="14" height="5" rx="2.5" fill="#10B981" />
+            <path d="M142 46V16M136 22L142 15L148 22" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         );
 
       case 'lat_pulldown':
         return (
-          <svg viewBox="0 0 240 120" width="220" height="110" fill="none" aria-label={label ?? 'Lat pulldown posture'}>
-            {/* Seat */}
-            <path d="M84 82H124M104 82V106" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
-            {/* Person */}
-            <circle cx="104" cy="44" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
-            <path d="M104 52L102 82L122 86L124 106" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            {/* Extended arms (top) */}
-            <path d="M102 58L90 22M102 58L116 22" stroke="#64748B" strokeWidth="2.5" strokeDasharray="3 3" strokeLinecap="round" />
-            <path d="M78 20H128" stroke="#64748B" strokeWidth="3" strokeLinecap="round" />
-            {/* Pulled down */}
-            <path d="M102 58L84 48L84 38M102 58L122 48L122 38" stroke="#10B981" strokeWidth="3" strokeLinecap="round" />
-            <path d="M76 38H130" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" />
-            {/* Arrow */}
-            <path d="M148 22V50M142 43L148 51L154 43" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="158" y="40" fill="#94A3B8" fontSize="9" fontFamily="Plus Jakarta Sans">Elbows to pockets</text>
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Lat pulldown posture'}>
+            <path d="M84 80H126M105 80V102" stroke="#263244" strokeWidth="4" strokeLinecap="round" />
+            <circle cx="105" cy="44" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M105 52L103 80L123 84L125 102" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M103 56L90 20M103 56L118 20" stroke="#64748B" strokeWidth="2.5" strokeDasharray="3 3" strokeLinecap="round" />
+            <path d="M78 18H130" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
+            <path d="M103 56L84 48V36M103 56L124 48V36" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M76 36H132" stroke="#10B981" strokeWidth="4" strokeLinecap="round" />
+            <path d="M154 20V50M148 43L154 51L160 43" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         );
 
       case 'seated_row':
         return (
-          <svg viewBox="0 0 240 120" width="220" height="110" fill="none" aria-label={label ?? 'Row posture'}>
-            <path d="M50 88H106" stroke="#334155" strokeWidth="4" strokeLinecap="round" />
-            <circle cx="72" cy="42" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
-            <path d="M72 50L72 82L122 84" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            {/* Extended reach */}
-            <path d="M72 56L134 58" stroke="#64748B" strokeWidth="2.5" strokeDasharray="3 3" strokeLinecap="round" />
-            {/* Pulled row */}
-            <path d="M72 56L54 66L80 66" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            {/* Pull arrow */}
-            <path d="M142 46H112M119 40L111 46L119 52" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="116" y="34" fill="#94A3B8" fontSize="9" fontFamily="Plus Jakarta Sans">Squeeze shoulder blades</text>
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Row posture'}>
+            <path d="M58 88H126" stroke="#263244" strokeWidth="4" strokeLinecap="round" />
+            <circle cx="80" cy="38" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M80 46V80L132 82" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M80 54L142 56" stroke="#64748B" strokeWidth="2.5" strokeDasharray="3 3" strokeLinecap="round" />
+            <path d="M80 54L62 64H88" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="88" cy="64" r="3" fill="#10B981" />
+            <path d="M164 56H132M139 49L131 56L139 63" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         );
 
       case 'squat':
         return (
-          <svg viewBox="0 0 240 120" width="220" height="110" fill="none" aria-label={label ?? 'Squat posture'}>
-            <line x1="40" y1="106" x2="180" y2="106" stroke="#334155" strokeWidth="2" />
-            {/* Standing ghost */}
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Squat posture'}>
+            <line x1="48" y1="100" x2="176" y2="100" stroke="#263244" strokeWidth="2.5" strokeLinecap="round" />
             <circle cx="80" cy="24" r="7" stroke="#64748B" strokeWidth="2" strokeDasharray="3 3" />
-            <path d="M80 31V66L74 104M80 66L86 104" stroke="#64748B" strokeWidth="2" strokeDasharray="3 3" strokeLinecap="round" />
-            {/* Squat bottom */}
-            <circle cx="128" cy="48" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
-            <path d="M126 56L114 78L136 86L130 104" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M124 62L144 64" stroke="#10B981" strokeWidth="3" strokeLinecap="round" />
-            {/* Vertical hip path */}
-            <path d="M158 46V84M152 77L158 85L164 77" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="166" y="64" fill="#94A3B8" fontSize="9" fontFamily="Plus Jakarta Sans">Chest tall, heels flat</text>
+            <path d="M80 31V64L74 98M80 64L86 98" stroke="#64748B" strokeWidth="2" strokeDasharray="3 3" strokeLinecap="round" />
+            <circle cx="126" cy="44" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M124 52L110 74L134 80L128 98" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M122 58L142 60" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
+            <circle cx="110" cy="74" r="3" fill="#10B981" />
+            <path d="M162 42V80M156 73L162 81L168 73" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         );
 
       case 'hinge':
         return (
-          <svg viewBox="0 0 240 120" width="220" height="110" fill="none" aria-label={label ?? 'Hip hinge posture'}>
-            <line x1="40" y1="106" x2="180" y2="106" stroke="#334155" strokeWidth="2" />
-            {/* Hinged spine */}
-            <circle cx="136" cy="46" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
-            <path d="M129 51L92 66L98 86L96 104" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            {/* Arms holding weight */}
-            <path d="M122 54L120 88" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
-            <rect x="114" y="88" width="12" height="6" rx="2" fill="#10B981" />
-            {/* Hip-back arrow */}
-            <path d="M84 66H58M65 60L57 66L65 72" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="44" y="48" fill="#94A3B8" fontSize="9" fontFamily="Plus Jakarta Sans">Hips back, flat spine</text>
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Hip hinge posture'}>
+            <line x1="48" y1="100" x2="176" y2="100" stroke="#263244" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="142" cy="42" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M134 47L94 62L100 82L98 98" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="94" cy="62" r="3.2" fill="#10B981" />
+            <path d="M126 50L124 84" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
+            <rect x="118" y="84" width="12" height="6" rx="2" fill="#10B981" />
+            <path d="M82 62H54M61 55L53 62L61 69" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         );
 
       case 'core_plank':
+        return (
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Core plank stability'}>
+            <line x1="36" y1="94" x2="184" y2="94" stroke="#263244" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="154" cy="54" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M58 80L144 60" stroke="#10B981" strokeWidth="4.5" strokeLinecap="round" />
+            <path d="M144 60V92M58 80L52 92" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" />
+            <path d="M72 48L134 34" stroke="#F59E0B" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" />
+          </svg>
+        );
+
       case 'core_rotation':
         return (
-          <svg viewBox="0 0 240 120" width="220" height="110" fill="none" aria-label={label ?? 'Core stability posture'}>
-            <line x1="36" y1="98" x2="204" y2="98" stroke="#334155" strokeWidth="2" />
-            {/* Plank body */}
-            <circle cx="158" cy="58" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
-            <path d="M62 84L148 64" stroke="#10B981" strokeWidth="4" strokeLinecap="round" />
-            <path d="M148 64L148 96" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" />
-            <path d="M62 84L54 96" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" />
-            {/* Alignment line */}
-            <path d="M84 56H126" stroke="#F59E0B" strokeWidth="2" strokeDasharray="4 3" />
-            <text x="72" y="44" fill="#94A3B8" fontSize="9" fontFamily="Plus Jakarta Sans">Neutral spine, hips level</text>
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Anti-rotation core press'}>
+            <line x1="56" y1="100" x2="164" y2="100" stroke="#263244" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="110" cy="30" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M110 38V72M110 72L94 98M110 72L126 98" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            <line x1="48" y1="54" x2="110" y2="54" stroke="#64748B" strokeWidth="2" strokeDasharray="3 3" />
+            <path d="M110 48L142 54L110 60" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="142" cy="54" r="3.5" fill="#10B981" />
+            <path d="M142 36V72" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
         );
 
       case 'cardio_stride':
         return (
-          <svg viewBox="0 0 240 120" width="220" height="110" fill="none" aria-label={label ?? 'Cardio cooldown'}>
-            <line x1="36" y1="104" x2="204" y2="104" stroke="#334155" strokeWidth="2" />
-            <circle cx="114" cy="30" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
-            <path d="M114 38L110 70L92 102M110 70L132 100" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M112 46L130 56M112 46L96 58" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
-            <path d="M148 44H178M171 38L179 44L171 50" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <text x="142" y="30" fill="#94A3B8" fontSize="9" fontFamily="Plus Jakarta Sans">Steady conversational pace</text>
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Cardio stride'}>
+            <line x1="42" y1="98" x2="178" y2="92" stroke="#263244" strokeWidth="3" strokeLinecap="round" />
+            <circle cx="110" cy="28" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M110 36L106 66L86 95M106 66L128 93" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M108 44L126 54M108 44L90 56" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
+            <path d="M144 44H174M167 37L175 44L167 51" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         );
 
       case 'mobility_flow':
+        return (
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Dynamic mobility flow'}>
+            <line x1="38" y1="98" x2="182" y2="98" stroke="#263244" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="118" cy="40" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M114 48L108 74L140 76L142 96M108 74L72 94" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M114 52L128 18" stroke="#F59E0B" strokeWidth="3.5" strokeLinecap="round" />
+            <path d="M104 28C112 18 126 16 136 22" stroke="#F59E0B" strokeWidth="2" strokeDasharray="3 3" strokeLinecap="round" />
+          </svg>
+        );
+
       case 'stretch_reach':
       default:
         return (
-          <svg viewBox="0 0 240 120" width="220" height="110" fill="none" aria-label={label ?? 'Mobility and stretch posture'}>
-            <line x1="36" y1="102" x2="204" y2="102" stroke="#334155" strokeWidth="2" />
-            <circle cx="114" cy="40" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
-            {/* Lunge / reach */}
-            <path d="M114 48L110 78L142 82L144 100M110 78L80 98" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M112 52L126 22" stroke="#F59E0B" strokeWidth="3" strokeLinecap="round" />
-            <text x="138" y="34" fill="#94A3B8" fontSize="9" fontFamily="Plus Jakarta Sans">Breathe &amp; lengthen</text>
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Flexibility stretch'}>
+            <line x1="38" y1="94" x2="182" y2="94" stroke="#263244" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="122" cy="68" r="7.5" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M68 88L98 68L116 74M68 88H98" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M116 74L158 88" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" />
+            <path d="M132 56H164M157 49L165 56L157 63" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         );
     }

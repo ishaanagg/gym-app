@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Cloud, CloudOff, Download, RotateCcw, Share2, Upload, User } from 'lucide-react';
+import { Check, Cloud, CloudOff, Download, RotateCcw, Share2, Upload, User } from 'lucide-react';
 import { storageRepo } from '../db/storage';
 import { shareOrDownloadBackup } from '../sync/backupProvider';
 import { googleDriveBackup } from '../sync/googleDrive';
@@ -35,7 +35,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const [userName, setUserName] = useState(settings.userName);
   const [gymName, setGymName] = useState(settings.gymName);
-  const [profileStatus, setProfileStatus] = useState<Status>(null);
+  const [savedFlash, setSavedFlash] = useState(false);
 
   const [driveConnected, setDriveConnected] = useState(googleDriveBackup.isConnected());
   const [driveBusy, setDriveBusy] = useState(false);
@@ -44,24 +44,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [localStatus, setLocalStatus] = useState<Status>(null);
   const [pendingRestore, setPendingRestore] = useState<PendingRestore | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const saveTimerRef = useRef<number | null>(null);
+  const flashTimerRef = useRef<number | null>(null);
 
   const driveConfigured = googleDriveBackup.isConfigured();
-  const profileDirty = userName.trim() !== settings.userName || gymName.trim() !== settings.gymName;
 
   useEffect(() => {
-    if (!profileStatus) return;
-    const t = setTimeout(() => setProfileStatus(null), 2500);
-    return () => clearTimeout(t);
-  }, [profileStatus]);
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+      if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+    };
+  }, []);
 
-  const saveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSaveSettings({
-      ...settings,
-      userName: userName.trim(),
-      gymName: gymName.trim() || 'My Building Gym',
-    });
-    setProfileStatus({ kind: 'ok', text: 'Saved on this device.' });
+  const scheduleAutoSave = (nextName: string, nextGym: string) => {
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      void onSaveSettings({
+        ...settings,
+        userName: nextName.trim(),
+        gymName: nextGym.trim() || 'My Building Gym',
+      });
+      setSavedFlash(true);
+      if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+      flashTimerRef.current = window.setTimeout(() => setSavedFlash(false), 1600);
+    }, 350);
   };
 
   const runDrive = async (action: () => Promise<void>) => {
@@ -83,12 +89,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       const last = await googleDriveBackup.getLastBackupTime();
       await onSaveSettings({
         ...settings,
+        userName: userName.trim(),
+        gymName: gymName.trim() || 'My Building Gym',
         driveBackupEnabled: true,
         lastCloudBackupAt: last ?? settings.lastCloudBackupAt,
       });
       setDriveStatus({
         kind: 'ok',
-        text: last ? `Connected. Last Drive backup: ${formatTime(last)}.` : 'Connected. No Drive backup yet.',
+        text: last ? `Connected. Last Drive backup: ${formatTime(last)}.` : 'Connected. Ready to back up.',
       });
     });
 
@@ -96,7 +104,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     runDrive(async () => {
       const data = await storageRepo.exportAll();
       const { savedAt } = await googleDriveBackup.backup(data);
-      await onSaveSettings({ ...settings, driveBackupEnabled: true, lastCloudBackupAt: savedAt });
+      await onSaveSettings({
+        ...settings,
+        userName: userName.trim(),
+        gymName: gymName.trim() || 'My Building Gym',
+        driveBackupEnabled: true,
+        lastCloudBackupAt: savedAt,
+      });
       setDriveStatus({ kind: 'ok', text: 'Backed up to Google Drive.' });
     });
 
@@ -190,14 +204,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
         <h1 className="page-title">Settings</h1>
-        <p className="page-subtitle">Everything stays on this device unless you back it up.</p>
+        <p className="page-subtitle">Stored privately on your phone unless you choose to back up.</p>
       </div>
 
-      {/* Profile */}
-      <form className="card" onSubmit={saveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <span className="section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <User size={14} /> Profile
-        </span>
+      {/* Auto-Saving Profile */}
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span className="section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <User size={14} /> Profile
+          </span>
+          {savedFlash && (
+            <span className="badge badge-emerald">
+              <Check size={11} /> Saved
+            </span>
+          )}
+        </div>
+
         <div>
           <label htmlFor="settings-user-name" className="section-label" style={{ display: 'block', marginBottom: 6 }}>
             Your name
@@ -206,12 +228,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             id="settings-user-name"
             className="input-field"
             value={userName}
-            onChange={(e) => setUserName(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setUserName(next);
+              scheduleAutoSave(next, gymName);
+            }}
             placeholder="e.g., Ishaan"
             maxLength={40}
             autoComplete="given-name"
           />
         </div>
+
         <div>
           <label htmlFor="settings-gym-name" className="section-label" style={{ display: 'block', marginBottom: 6 }}>
             Building / gym name
@@ -220,21 +247,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             id="settings-gym-name"
             className="input-field"
             value={gymName}
-            onChange={(e) => setGymName(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setGymName(next);
+              scheduleAutoSave(userName, next);
+            }}
             placeholder="e.g., The Arden Fitness Room"
             maxLength={50}
           />
         </div>
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={!profileDirty}
-          style={{ opacity: profileDirty ? 1 : 0.45 }}
-        >
-          Save Profile
-        </button>
-        {statusLine(profileStatus)}
-      </form>
+      </div>
 
       {/* Google Drive */}
       <div className="card">
@@ -251,14 +273,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         {!driveConfigured ? (
           <p className="page-subtitle">
-            Direct Drive sync isn&apos;t set up for this build yet. Use <strong>Share Backup</strong>{' '}
-            below and choose <strong>Save to Drive</strong> from your phone&apos;s share sheet.
+            Use <strong>Share Backup</strong> below and pick <strong>Save to Drive</strong> from your
+            phone&apos;s share sheet.
           </p>
         ) : (
           <>
             <p className="page-subtitle" style={{ marginBottom: 12 }}>
-              Saves your machines, progress, history, and settings to a private app folder in your
-              Google Drive. Kinetic cannot see any of your other files.
+              Saves your machines, workouts, and settings to a hidden app folder in your Google
+              Drive. Kinetic cannot access any other Drive files.
             </p>
             <div className="exercise-meta" style={{ marginBottom: 12 }}>
               Last backup: <span className="mono">{formatTime(settings.lastCloudBackupAt)}</span>
@@ -311,7 +333,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {statusLine(localStatus)}
       </div>
 
-      {/* Native-feeling Restore Confirmation Sheet (replaces window.confirm) */}
       {pendingRestore && (
         <div className="modal-backdrop" onClick={() => setPendingRestore(null)}>
           <div

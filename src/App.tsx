@@ -148,6 +148,8 @@ export function App() {
 
     const updatedProgress = { ...progress };
     for (const block of finalized.blocks) {
+      // Only track double-progression targets on Strength & Core lifts
+      if (block.type !== 'strength' && block.type !== 'core') continue;
       for (const pe of block.exercises) {
         const hasActivity = pe.effort || pe.sets.some((s) => s.completed);
         if (!hasActivity) continue;
@@ -164,7 +166,6 @@ export function App() {
     setInProgressSession(null);
     setPlannedSession(finalized);
 
-    // Best-effort auto-backup: only when opted in and Drive token is active.
     if (settings.driveBackupEnabled && googleDriveBackup.isConnected()) {
       try {
         const { savedAt } = await googleDriveBackup.backup(await storageRepo.exportAll());
@@ -227,22 +228,30 @@ export function App() {
   };
 
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <div className="brand-mark">
-          <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Kinetic" width={30} height={30} />
-          <div>
-            <div className="brand-title">Kinetic</div>
-            <div className="brand-sub">{settings.gymName}</div>
+    <div className={`app-shell ${isPlaying ? 'playing' : ''}`}>
+      {!isPlaying && (
+        <header className="app-header">
+          <div className="brand-mark">
+            <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Kinetic" width={30} height={30} />
+            <div>
+              <div className="brand-title">Kinetic</div>
+              <button
+                type="button"
+                className="brand-sub-btn"
+                onClick={() => switchTab('gym')}
+                title="Customize your gym"
+              >
+                {settings.gymName} ›
+              </button>
+            </div>
           </div>
-        </div>
-        {isPlaying && <span className="badge badge-emerald">Active</span>}
-      </header>
+        </header>
+      )}
 
       <main className="main-content">
         {loading || !plannedSession ? (
           <div className="card">
-            <p className="page-subtitle">Loading your gym profile…</p>
+            <p className="page-subtitle">Preparing your session…</p>
           </div>
         ) : isPlaying ? (
           <WorkoutPlayer
@@ -314,7 +323,7 @@ export function App() {
               onClick={() => switchTab('progress')}
             >
               <BarChart3 size={20} />
-              <span>Progress</span>
+              <span>Momentum</span>
             </button>
             <button
               type="button"

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowLeftRight, Play, RefreshCw, RotateCcw, Sparkles } from 'lucide-react';
+import { ArrowLeftRight, Play, RefreshCw, RotateCcw } from 'lucide-react';
 import type {
   BlockType,
   Equipment,
@@ -64,29 +64,29 @@ export const TodayView: React.FC<TodayViewProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
         <h1 className="page-title">
-          {userName ? `Hi ${userName}, ready to move?` : 'Today\u2019s Session'}
+          {userName ? `Ready, ${userName}?` : 'Today'}
         </h1>
         <p className="page-subtitle">{focusSummary}</p>
       </div>
 
-      {/* Resume In-Progress Workout Banner */}
+      {/* Paused Workout Recovery */}
       {inProgressSession && (
         <div
           className="card"
           style={{
-            borderColor: 'rgba(245, 158, 11, 0.4)',
+            borderColor: 'rgba(245, 158, 11, 0.36)',
             background:
-              'linear-gradient(180deg, rgba(245, 158, 11, 0.11) 0%, rgba(17, 23, 32, 0.96) 100%)',
+              'linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, rgba(16, 22, 31, 0.95) 100%)',
           }}
         >
-          <div className="card-header" style={{ marginBottom: 8 }}>
+          <div className="card-header" style={{ marginBottom: 6 }}>
             <span className="badge badge-amber">Paused Session</span>
             <button type="button" className="btn-ghost" onClick={onDiscardInProgress}>
               Discard
             </button>
           </div>
           <p className="page-subtitle" style={{ marginBottom: 12 }}>
-            Pick up your {inProgressSession.durationMin}-minute workout right where you left off.
+            Continue your {inProgressSession.durationMin}-minute workout right where you left off.
           </p>
           <button type="button" className="btn btn-primary" onClick={onResumeWorkout}>
             <RotateCcw size={17} /> Resume Workout
@@ -94,15 +94,12 @@ export const TodayView: React.FC<TodayViewProps> = ({
         </div>
       )}
 
-      {/* Integrated Hero Card: Segmented Duration + Shuffle + Primary Start CTA */}
+      {/* Hero Control Card */}
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div className="card-header" style={{ marginBottom: 0 }}>
-          <div>
-            <span className="section-label">Session Length</span>
-            <div className="exercise-meta" style={{ marginTop: 2 }}>
-              {totalMovements} movements across {session.blocks.length} blocks
-            </div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span className="exercise-meta">
+            {totalMovements} movements · 5 balanced phases
+          </span>
           <button
             type="button"
             className="btn-ghost"
@@ -110,7 +107,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
               triggerHaptic(8);
               onRegenerate();
             }}
-            title="Shuffle exercises"
+            title="Shuffle workout"
           >
             <RefreshCw size={14} /> Shuffle
           </button>
@@ -144,72 +141,75 @@ export const TodayView: React.FC<TodayViewProps> = ({
           }}
         >
           <Play size={18} fill="currentColor" />
-          Start {duration}-Min Workout
+          Begin {duration}-Min Session
         </button>
       </div>
 
-      {/* 5-Block Plan Overview */}
-      {session.blocks.map((block) => (
-        <div key={block.type} className="card">
-          <div className="card-header">
-            <span className="section-label">{block.title}</span>
-            <span className="badge badge-slate mono">~{block.estimatedMinutes}m</span>
-          </div>
+      {/* Unified Continuous Session Flow Sheet */}
+      <section className="flow-sheet" aria-label="Session plan">
+        {session.blocks.map((block) => (
+          <div key={block.type} className="flow-block">
+            <div className="flow-block-header">
+              <span className="section-label">{block.title}</span>
+              <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                {block.estimatedMinutes} min
+              </span>
+            </div>
 
-          <div>
-            {block.exercises.map((pe) => {
-              const ex = exerciseMap.get(pe.exerciseId);
-              if (!ex) return null;
-              const eq = equipmentMap.get(ex.equipmentId);
-              const unit = eq?.weightUnit ?? 'lbs';
-              const firstSet = pe.sets[0];
+            <div>
+              {block.exercises.map((pe) => {
+                const ex = exerciseMap.get(pe.exerciseId);
+                if (!ex) return null;
+                const eq = equipmentMap.get(ex.equipmentId);
+                const unit = eq?.weightUnit ?? 'lbs';
+                const firstSet = pe.sets[0];
 
-              return (
-                <div key={pe.instanceId} className="exercise-row">
-                  <div style={{ minWidth: 0 }}>
-                    <div
-                      className="exercise-name"
-                      style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}
-                    >
-                      <span>{ex.name}</span>
-                      {pe.isFirstTime && block.type === 'strength' && (
-                        <span className="badge badge-amber">
-                          <Sparkles size={11} /> First time
+                return (
+                  <div key={pe.instanceId} className="exercise-row">
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        className="exercise-name"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}
+                      >
+                        <span>{ex.name}</span>
+                        {pe.isFirstTime && block.type === 'strength' && (
+                          <span className="badge badge-amber">Baseline</span>
+                        )}
+                      </div>
+                      <div className="exercise-meta">
+                        {eq?.name} ·{' '}
+                        <span className="mono">
+                          {ex.isTimed
+                            ? `${Math.round(
+                                (ex.durationSec ?? 60) >= 60
+                                  ? (ex.durationSec ?? 60) / 60
+                                  : ex.durationSec ?? 45
+                              )}${(ex.durationSec ?? 60) >= 60 ? ' min' : 's'}`
+                            : firstSet.targetWeight > 0
+                            ? `${pe.sets.length} × ${firstSet.targetReps} · ${firstSet.targetWeight} ${unit}`
+                            : `${pe.sets.length} × ${firstSet.targetReps}`}
                         </span>
-                      )}
+                      </div>
                     </div>
-                    <div className="exercise-meta">
-                      {eq?.name} ·{' '}
-                      <span className="mono">
-                        {ex.isTimed
-                          ? `${Math.round(
-                              (ex.durationSec ?? 60) >= 60
-                                ? (ex.durationSec ?? 60) / 60
-                                : ex.durationSec ?? 45
-                            )}${(ex.durationSec ?? 60) >= 60 ? ' min' : 's'}`
-                          : firstSet.targetWeight > 0
-                          ? `${pe.sets.length} × ${firstSet.targetReps} @ ${firstSet.targetWeight} ${unit}`
-                          : `${pe.sets.length} × ${firstSet.targetReps} reps`}
-                      </span>
-                    </div>
-                  </div>
 
-                  <button
-                    type="button"
-                    className="btn-ghost"
-                    onClick={() =>
-                      setSwapTarget({ blockType: block.type, planned: pe, exercise: ex })
-                    }
-                    aria-label={`Swap ${ex.name}`}
-                  >
-                    <ArrowLeftRight size={14} /> Swap
-                  </button>
-                </div>
-              );
-            })}
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      onClick={() =>
+                        setSwapTarget({ blockType: block.type, planned: pe, exercise: ex })
+                      }
+                      aria-label={`Swap ${ex.name}`}
+                      title={`Swap ${ex.name}`}
+                    >
+                      <ArrowLeftRight size={15} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </section>
 
       {swapTarget && (
         <SwapModal

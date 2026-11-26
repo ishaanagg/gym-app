@@ -245,6 +245,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
             onSubmit={handleSave}
             style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
           >
+            <div className="sheet-handle" />
             <div className="card-header" style={{ marginBottom: 0 }}>
               <h2 style={{ margin: 0, fontSize: '1.08rem' }}>
                 {editing.name ? `Edit ${editing.name}` : 'Add Equipment'}
@@ -394,6 +395,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
             onSubmit={handleSaveNewExercise}
             style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
           >
+            <div className="sheet-handle" />
             <div className="card-header" style={{ marginBottom: 0 }}>
               <div>
                 <span className="section-label">{addingExerciseFor.name}</span>

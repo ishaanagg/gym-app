@@ -6,12 +6,12 @@ import { SettingsView } from './components/SettingsView';
 import { TodayView } from './components/TodayView';
 import { WorkoutPlayer } from './components/WorkoutPlayer';
 import { DEFAULT_SETTINGS, storageRepo } from './db/storage';
-import { googleDriveBackup } from './sync/googleDrive';
 import {
   buildPlannedExercise,
   computeUpdatedProgress,
   generateWorkoutSession,
 } from './engine/workoutGenerator';
+import { googleDriveBackup } from './sync/googleDrive';
 import type {
   AppSettings,
   BlockType,
@@ -21,6 +21,7 @@ import type {
   SessionDuration,
   WorkoutSession,
 } from './types/gym';
+import { triggerHaptic } from './utils/ux';
 
 type Tab = 'today' | 'progress' | 'gym' | 'settings';
 
@@ -39,23 +40,36 @@ export function App() {
   const [inProgressSession, setInProgressSession] = useState<WorkoutSession | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const applyLoadedState = useCallback(
+    (data: Awaited<ReturnType<typeof storageRepo.initializeAndLoad>>) => {
+      setEquipment(data.equipment);
+      setExercises(data.exercises);
+      setSessions(data.sessions);
+      setProgress(data.progress);
+      setInProgressSession(data.activeSession);
+      setSettings(data.settings);
+      setPlannedSession(
+        generateWorkoutSession(30, data.equipment, data.exercises, data.sessions, data.progress)
+      );
+      setLoading(false);
+    },
+    []
+  );
+
   const hydrateFromStorage = useCallback(async () => {
     const data = await storageRepo.initializeAndLoad();
-    setEquipment(data.equipment);
-    setExercises(data.exercises);
-    setSessions(data.sessions);
-    setProgress(data.progress);
-    setInProgressSession(data.activeSession);
-    setSettings(data.settings);
-    setPlannedSession(
-      generateWorkoutSession(30, data.equipment, data.exercises, data.sessions, data.progress)
-    );
-    setLoading(false);
-  }, []);
+    applyLoadedState(data);
+  }, [applyLoadedState]);
 
   useEffect(() => {
-    void hydrateFromStorage();
-  }, [hydrateFromStorage]);
+    let active = true;
+    storageRepo.initializeAndLoad().then((data) => {
+      if (active) applyLoadedState(data);
+    });
+    return () => {
+      active = false;
+    };
+  }, [applyLoadedState]);
 
   const handleChangeDuration = (newDuration: SessionDuration) => {
     setDuration(newDuration);
@@ -78,7 +92,7 @@ export function App() {
     if (!plannedSession) return;
     const eqMap = new Map(equipment.map((e) => [e.id, e]));
 
-    setPlannedSession({
+    const updated: WorkoutSession = {
       ...plannedSession,
       blocks: plannedSession.blocks.map((b) => {
         if (b.type !== blockType) return b;
@@ -90,7 +104,13 @@ export function App() {
           }),
         };
       }),
-    });
+    };
+
+    setPlannedSession(updated);
+    if (isPlaying) {
+      setInProgressSession(updated);
+      void storageRepo.saveActiveSession(updated);
+    }
   };
 
   const handleStartWorkout = async () => {
@@ -99,6 +119,7 @@ export function App() {
     setPlannedSession(started);
     setInProgressSession(started);
     setIsPlaying(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     await storageRepo.saveActiveSession(started);
   };
 
@@ -106,6 +127,7 @@ export function App() {
     if (!inProgressSession) return;
     setPlannedSession(inProgressSession);
     setIsPlaying(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDiscardInProgress = async () => {
@@ -142,14 +164,13 @@ export function App() {
     setInProgressSession(null);
     setPlannedSession(finalized);
 
-    // Best-effort auto-backup: only when the user opted in and a Drive token is still valid.
-    // Never blocks or fails the workout; manual backup stays available in Settings.
+    // Best-effort auto-backup: only when opted in and Drive token is active.
     if (settings.driveBackupEnabled && googleDriveBackup.isConnected()) {
       try {
         const { savedAt } = await googleDriveBackup.backup(await storageRepo.exportAll());
         await handleSaveSettings({ ...settings, lastCloudBackupAt: savedAt });
       } catch {
-        // Ignore; user can back up manually.
+        // Ignore; manual backup remains available in Settings.
       }
     }
   };
@@ -161,7 +182,6 @@ export function App() {
 
   const handleDeleteEquipment = async (id: string) => {
     await storageRepo.deleteEquipment(id);
-    // Reload exercises: custom exercises linked to the removed machine were deleted with it.
     const nextEq = equipment.filter((e) => e.id !== id);
     const data = await storageRepo.initializeAndLoad();
     setEquipment(nextEq);
@@ -194,9 +214,16 @@ export function App() {
 
   const handleExitPlayer = () => {
     setIsPlaying(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setPlannedSession(
       generateWorkoutSession(duration, equipment, exercises, sessions, progress)
     );
+  };
+
+  const switchTab = (tab: Tab) => {
+    triggerHaptic(6);
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -209,20 +236,23 @@ export function App() {
             <div className="brand-sub">{settings.gymName}</div>
           </div>
         </div>
-        {isPlaying && <span className="badge badge-emerald">In Session</span>}
+        {isPlaying && <span className="badge badge-emerald">Active</span>}
       </header>
 
       <main className="main-content">
         {loading || !plannedSession ? (
           <div className="card">
-            <p className="page-subtitle">Loading your building gym profile...</p>
+            <p className="page-subtitle">Loading your gym profile…</p>
           </div>
         ) : isPlaying ? (
           <WorkoutPlayer
             session={plannedSession}
             equipment={equipment}
             exercises={exercises}
+            recentSessions={sessions}
+            progress={progress}
             onUpdateSession={handleUpdateActiveSession}
+            onSwapExercise={handleSwapExercise}
             onFinishWorkout={handleFinishWorkout}
             onExit={handleExitPlayer}
           />
@@ -273,7 +303,7 @@ export function App() {
             <button
               type="button"
               className={`nav-item ${activeTab === 'today' ? 'active' : ''}`}
-              onClick={() => setActiveTab('today')}
+              onClick={() => switchTab('today')}
             >
               <Flame size={20} />
               <span>Today</span>
@@ -281,7 +311,7 @@ export function App() {
             <button
               type="button"
               className={`nav-item ${activeTab === 'progress' ? 'active' : ''}`}
-              onClick={() => setActiveTab('progress')}
+              onClick={() => switchTab('progress')}
             >
               <BarChart3 size={20} />
               <span>Progress</span>
@@ -289,7 +319,7 @@ export function App() {
             <button
               type="button"
               className={`nav-item ${activeTab === 'gym' ? 'active' : ''}`}
-              onClick={() => setActiveTab('gym')}
+              onClick={() => switchTab('gym')}
             >
               <Dumbbell size={20} />
               <span>My Gym</span>
@@ -297,7 +327,7 @@ export function App() {
             <button
               type="button"
               className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('settings')}
+              onClick={() => switchTab('settings')}
             >
               <SettingsIcon size={20} />
               <span>Settings</span>

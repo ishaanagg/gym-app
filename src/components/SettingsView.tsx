@@ -13,6 +13,11 @@ interface SettingsViewProps {
 
 type Status = { kind: 'ok' | 'error'; text: string } | null;
 
+interface PendingRestore {
+  sourceLabel: string;
+  data: GymExportData;
+}
+
 function formatTime(iso?: string | null): string {
   if (!iso) return 'Never';
   return new Date(iso).toLocaleString(undefined, {
@@ -37,6 +42,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [driveStatus, setDriveStatus] = useState<Status>(null);
 
   const [localStatus, setLocalStatus] = useState<Status>(null);
+  const [pendingRestore, setPendingRestore] = useState<PendingRestore | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const driveConfigured = googleDriveBackup.isConfigured();
@@ -101,14 +107,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         setDriveStatus({ kind: 'error', text: 'No Kinetic backup found in this Google account.' });
         return;
       }
-      const ok = window.confirm(
-        `Replace everything on this device with the Drive backup from ${formatTime(data.exportedAt)}?`
-      );
-      if (!ok) return;
-      await storageRepo.importAll(data);
-      await onDataRestored();
-      setDriveStatus({ kind: 'ok', text: 'Restored from Google Drive.' });
+      setPendingRestore({
+        sourceLabel: `Google Drive backup (${formatTime(data.exportedAt)})`,
+        data,
+      });
     });
+
+  const confirmRestore = async () => {
+    if (!pendingRestore) return;
+    const isDrive = pendingRestore.sourceLabel.startsWith('Google Drive');
+    try {
+      await storageRepo.importAll(pendingRestore.data);
+      await onDataRestored();
+      if (pendingRestore.data.settings) {
+        setUserName(pendingRestore.data.settings.userName);
+        setGymName(pendingRestore.data.settings.gymName);
+      }
+      const msg: Status = { kind: 'ok', text: 'Backup restored on this device.' };
+      if (isDrive) setDriveStatus(msg);
+      else setLocalStatus(msg);
+    } catch (err) {
+      const msg: Status = {
+        kind: 'error',
+        text: err instanceof Error ? err.message : 'Could not restore backup.',
+      };
+      if (isDrive) setDriveStatus(msg);
+      else setLocalStatus(msg);
+    } finally {
+      setPendingRestore(null);
+    }
+  };
 
   const disconnectDrive = async () => {
     googleDriveBackup.disconnect();
@@ -133,10 +161,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (!file) return;
     try {
       const parsed = JSON.parse(await file.text()) as GymExportData;
-      if (!window.confirm('Replace everything on this device with this backup file?')) return;
-      await storageRepo.importAll(parsed);
-      await onDataRestored();
-      setLocalStatus({ kind: 'ok', text: 'Backup restored.' });
+      if (!parsed || parsed.version !== 1) {
+        throw new Error('Unsupported backup file format.');
+      }
+      setPendingRestore({
+        sourceLabel: `file "${file.name}" (${formatTime(parsed.exportedAt)})`,
+        data: parsed,
+      });
     } catch (err) {
       setLocalStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Invalid backup file.' });
     } finally {
@@ -148,7 +179,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     s && (
       <p
         className="exercise-meta"
-        style={{ marginTop: 10, color: s.kind === 'ok' ? 'var(--accent-emerald)' : '#fda4af' }}
+        style={{ marginTop: 10, color: s.kind === 'ok' ? 'var(--accent-emerald-bright)' : '#fda4af' }}
         role="status"
       >
         {s.text}
@@ -159,7 +190,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
         <h1 className="page-title">Settings</h1>
-        <p className="page-subtitle">Everything is stored on this device unless you back it up.</p>
+        <p className="page-subtitle">Everything stays on this device unless you back it up.</p>
       </div>
 
       {/* Profile */}
@@ -194,7 +225,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             maxLength={50}
           />
         </div>
-        <button type="submit" className="btn btn-primary" disabled={!profileDirty} style={{ opacity: profileDirty ? 1 : 0.5 }}>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={!profileDirty}
+          style={{ opacity: profileDirty ? 1 : 0.45 }}
+        >
           Save Profile
         </button>
         {statusLine(profileStatus)}
@@ -215,16 +251,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         {!driveConfigured ? (
           <p className="page-subtitle">
-            Direct Drive sync isn&apos;t set up for this build yet. In the meantime, use{' '}
-            <strong>Share Backup</strong> below and choose <strong>Save to Drive</strong> from your phone&apos;s
-            share sheet.
+            Direct Drive sync isn&apos;t set up for this build yet. Use <strong>Share Backup</strong>{' '}
+            below and choose <strong>Save to Drive</strong> from your phone&apos;s share sheet.
           </p>
         ) : (
           <>
             <p className="page-subtitle" style={{ marginBottom: 12 }}>
-              Saves your machines, progress, history, and settings to a private app folder in your Google Drive.
-              Kinetic can&apos;t see any of your other files. When connected, a backup also runs automatically after
-              each workout.
+              Saves your machines, progress, history, and settings to a private app folder in your
+              Google Drive. Kinetic cannot see any of your other files.
             </p>
             <div className="exercise-meta" style={{ marginBottom: 12 }}>
               Last backup: <span className="mono">{formatTime(settings.lastCloudBackupAt)}</span>
@@ -276,6 +310,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
         {statusLine(localStatus)}
       </div>
+
+      {/* Native-feeling Restore Confirmation Sheet (replaces window.confirm) */}
+      {pendingRestore && (
+        <div className="modal-backdrop" onClick={() => setPendingRestore(null)}>
+          <div
+            className="modal-sheet"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+          >
+            <div className="sheet-handle" />
+            <h2 style={{ margin: 0, fontSize: '1.12rem' }}>Restore Backup?</h2>
+            <p className="page-subtitle">
+              This will replace all machines, workout history, and settings on this device with your{' '}
+              <strong>{pendingRestore.sourceLabel}</strong>.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setPendingRestore(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                style={{ flex: 1 }}
+                onClick={confirmRestore}
+              >
+                Restore Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

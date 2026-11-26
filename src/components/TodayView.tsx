@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeftRight, Play, RefreshCw, RotateCcw, Sparkles, X } from 'lucide-react';
-import { getSwapCandidates } from '../engine/workoutGenerator';
+import React, { useMemo, useState } from 'react';
+import { ArrowLeftRight, Play, RefreshCw, RotateCcw, Sparkles } from 'lucide-react';
 import type {
   BlockType,
   Equipment,
@@ -9,6 +8,8 @@ import type {
   SessionDuration,
   WorkoutSession,
 } from '../types/gym';
+import { describeSessionFocus, triggerHaptic } from '../utils/ux';
+import { SwapModal } from './SwapModal';
 
 interface TodayViewProps {
   duration: SessionDuration;
@@ -49,19 +50,15 @@ export const TodayView: React.FC<TodayViewProps> = ({
     exercise: Exercise;
   } | null>(null);
 
-  const exerciseMap = new Map(exercises.map((e) => [e.id, e]));
-  const equipmentMap = new Map(equipment.map((e) => [e.id, e]));
+  const exerciseMap = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises]);
+  const equipmentMap = useMemo(() => new Map(equipment.map((e) => [e.id, e])), [equipment]);
 
-  const swapCandidates = swapTarget
-    ? getSwapCandidates(
-        swapTarget.exercise,
-        swapTarget.blockType,
-        session,
-        equipment,
-        exercises,
-        recentSessions
-      )
-    : [];
+  const focusSummary = useMemo(
+    () => describeSessionFocus(session, exercises, recentSessions),
+    [session, exercises, recentSessions]
+  );
+
+  const totalMovements = session.blocks.reduce((sum, b) => sum + b.exercises.length, 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -69,9 +66,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
         <h1 className="page-title">
           {userName ? `Hi ${userName}, ready to move?` : 'Today\u2019s Session'}
         </h1>
-        <p className="page-subtitle">
-          Balanced rotation tailored to your building&apos;s gym.
-        </p>
+        <p className="page-subtitle">{focusSummary}</p>
       </div>
 
       {/* Resume In-Progress Workout Banner */}
@@ -79,61 +74,81 @@ export const TodayView: React.FC<TodayViewProps> = ({
         <div
           className="card"
           style={{
-            borderColor: 'rgba(245, 158, 11, 0.45)',
+            borderColor: 'rgba(245, 158, 11, 0.4)',
             background:
-              'linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, rgba(18, 24, 33, 0.96) 100%)',
+              'linear-gradient(180deg, rgba(245, 158, 11, 0.11) 0%, rgba(17, 23, 32, 0.96) 100%)',
           }}
         >
           <div className="card-header" style={{ marginBottom: 8 }}>
-            <span className="badge badge-amber">In-Progress Session Saved</span>
+            <span className="badge badge-amber">Paused Session</span>
             <button type="button" className="btn-ghost" onClick={onDiscardInProgress}>
               Discard
             </button>
           </div>
           <p className="page-subtitle" style={{ marginBottom: 12 }}>
-            You have an unfinished {inProgressSession.durationMin}-minute workout with saved sets.
+            Pick up your {inProgressSession.durationMin}-minute workout right where you left off.
           </p>
           <button type="button" className="btn btn-primary" onClick={onResumeWorkout}>
-            <RotateCcw size={16} /> Resume Saved Workout
+            <RotateCcw size={17} /> Resume Workout
           </button>
         </div>
       )}
 
-      {/* Session Length Picker */}
-      <div className="card">
-        <div className="card-header">
-          <span className="section-label">Session Length</span>
+      {/* Integrated Hero Card: Segmented Duration + Shuffle + Primary Start CTA */}
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div className="card-header" style={{ marginBottom: 0 }}>
+          <div>
+            <span className="section-label">Session Length</span>
+            <div className="exercise-meta" style={{ marginTop: 2 }}>
+              {totalMovements} movements across {session.blocks.length} blocks
+            </div>
+          </div>
           <button
             type="button"
             className="btn-ghost"
-            onClick={onRegenerate}
+            onClick={() => {
+              triggerHaptic(8);
+              onRegenerate();
+            }}
             title="Shuffle exercises"
           >
-            <RefreshCw size={14} /> Regenerate
+            <RefreshCw size={14} /> Shuffle
           </button>
         </div>
-        <div className="duration-grid">
+
+        <div className="segmented-control" role="radiogroup" aria-label="Workout duration">
           {DURATIONS.map((d) => (
             <button
               key={d}
               type="button"
-              className={`duration-btn ${duration === d ? 'active' : ''}`}
-              onClick={() => onChangeDuration(d)}
+              role="radio"
+              aria-checked={duration === d}
+              className={`segment-btn ${duration === d ? 'active' : ''}`}
+              onClick={() => {
+                triggerHaptic(8);
+                onChangeDuration(d);
+              }}
             >
               <span className="mono">{d}</span>
-              <span className="unit">min</span>
+              <span className="unit">m</span>
             </button>
           ))}
         </div>
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => {
+            triggerHaptic(12);
+            onStartWorkout();
+          }}
+        >
+          <Play size={18} fill="currentColor" />
+          Start {duration}-Min Workout
+        </button>
       </div>
 
-      {/* Start CTA */}
-      <button type="button" className="btn btn-primary" onClick={onStartWorkout}>
-        <Play size={18} fill="currentColor" />
-        Start {duration}-Min Workout
-      </button>
-
-      {/* 5-Block Preview */}
+      {/* 5-Block Plan Overview */}
       {session.blocks.map((block) => (
         <div key={block.type} className="card">
           <div className="card-header">
@@ -167,7 +182,11 @@ export const TodayView: React.FC<TodayViewProps> = ({
                       {eq?.name} ·{' '}
                       <span className="mono">
                         {ex.isTimed
-                          ? `${Math.round((ex.durationSec ?? 60) >= 60 ? (ex.durationSec ?? 60) / 60 : ex.durationSec ?? 45)}${(ex.durationSec ?? 60) >= 60 ? ' min' : 's'}`
+                          ? `${Math.round(
+                              (ex.durationSec ?? 60) >= 60
+                                ? (ex.durationSec ?? 60) / 60
+                                : ex.durationSec ?? 45
+                            )}${(ex.durationSec ?? 60) >= 60 ? ' min' : 's'}`
                           : firstSet.targetWeight > 0
                           ? `${pe.sets.length} × ${firstSet.targetReps} @ ${firstSet.targetWeight} ${unit}`
                           : `${pe.sets.length} × ${firstSet.targetReps} reps`}
@@ -192,60 +211,16 @@ export const TodayView: React.FC<TodayViewProps> = ({
         </div>
       ))}
 
-      {/* Swap Modal */}
       {swapTarget && (
-        <div className="modal-backdrop" onClick={() => setSwapTarget(null)}>
-          <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="card-header">
-              <div>
-                <span className="section-label">Machine Occupied?</span>
-                <h2 style={{ margin: '4px 0 0 0', fontSize: '1.05rem' }}>
-                  Swap {swapTarget.exercise.name}
-                </h2>
-              </div>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => setSwapTarget(null)}
-                aria-label="Close swap modal"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {swapCandidates.length === 0 ? (
-              <p className="page-subtitle" style={{ padding: '12px 0' }}>
-                No other available exercises for this pattern right now. You can enable more
-                equipment or link exercises in <strong>My Gym</strong>.
-              </p>
-            ) : (
-              <div>
-                {swapCandidates.map((cand) => {
-                  const eq = equipmentMap.get(cand.equipmentId);
-                  return (
-                    <div key={cand.id} className="exercise-row">
-                      <div>
-                        <div className="exercise-name">{cand.name}</div>
-                        <div className="exercise-meta">{eq?.name}</div>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '8px 12px', fontSize: '0.82rem' }}
-                        onClick={() => {
-                          onSwapExercise(swapTarget.blockType, swapTarget.planned.instanceId, cand);
-                          setSwapTarget(null);
-                        }}
-                      >
-                        Use This
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+        <SwapModal
+          target={swapTarget}
+          session={session}
+          equipment={equipment}
+          exercises={exercises}
+          recentSessions={recentSessions}
+          onSelect={onSwapExercise}
+          onClose={() => setSwapTarget(null)}
+        />
       )}
     </div>
   );

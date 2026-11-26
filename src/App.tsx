@@ -19,6 +19,8 @@ import type {
   Exercise,
   ExerciseProgress,
   SessionDuration,
+  SessionIntensity,
+  TargetArea,
   WorkoutSession,
 } from './types/gym';
 import { triggerHaptic } from './utils/ux';
@@ -29,6 +31,8 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [duration, setDuration] = useState<SessionDuration>(30);
+  const [intensity, setIntensity] = useState<SessionIntensity>('medium');
+  const [targets, setTargets] = useState<TargetArea[]>([]);
 
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -49,7 +53,16 @@ export function App() {
       setInProgressSession(data.activeSession);
       setSettings(data.settings);
       setPlannedSession(
-        generateWorkoutSession(30, data.equipment, data.exercises, data.sessions, data.progress)
+        generateWorkoutSession(
+          30,
+          data.equipment,
+          data.exercises,
+          data.sessions,
+          data.progress,
+          Math.random,
+          () => new Date(),
+          { targets: [], intensity: 'medium' }
+        )
       );
       setLoading(false);
     },
@@ -71,17 +84,52 @@ export function App() {
     };
   }, [applyLoadedState]);
 
-  const handleChangeDuration = (newDuration: SessionDuration) => {
-    setDuration(newDuration);
+  const rebuildPlan = (
+    nextDuration: SessionDuration,
+    nextTargets: TargetArea[],
+    nextIntensity: SessionIntensity,
+    eqList = equipment,
+    exList = exercises
+  ) => {
     setPlannedSession(
-      generateWorkoutSession(newDuration, equipment, exercises, sessions, progress)
+      generateWorkoutSession(
+        nextDuration,
+        eqList,
+        exList,
+        sessions,
+        progress,
+        Math.random,
+        () => new Date(),
+        { targets: nextTargets, intensity: nextIntensity }
+      )
     );
   };
 
+  const handleChangeDuration = (newDuration: SessionDuration) => {
+    setDuration(newDuration);
+    rebuildPlan(newDuration, targets, intensity);
+  };
+
+  const handleChangeIntensity = (newIntensity: SessionIntensity) => {
+    setIntensity(newIntensity);
+    rebuildPlan(duration, targets, newIntensity);
+  };
+
+  const handleToggleTarget = (area: TargetArea) => {
+    const nextTargets = targets.includes(area)
+      ? targets.filter((t) => t !== area)
+      : [...targets, area];
+    setTargets(nextTargets);
+    rebuildPlan(duration, nextTargets, intensity);
+  };
+
+  const handleClearTargets = () => {
+    setTargets([]);
+    rebuildPlan(duration, [], intensity);
+  };
+
   const handleRegenerate = () => {
-    setPlannedSession(
-      generateWorkoutSession(duration, equipment, exercises, sessions, progress)
-    );
+    rebuildPlan(duration, targets, intensity);
   };
 
   const handleSwapExercise = (
@@ -91,6 +139,7 @@ export function App() {
   ) => {
     if (!plannedSession) return;
     const eqMap = new Map(equipment.map((e) => [e.id, e]));
+    const activeIntensity = plannedSession.intensity ?? intensity;
 
     const updated: WorkoutSession = {
       ...plannedSession,
@@ -100,7 +149,14 @@ export function App() {
           ...b,
           exercises: b.exercises.map((pe) => {
             if (pe.instanceId !== instanceId) return pe;
-            return buildPlannedExercise(newExercise, eqMap, progress, pe.sets.length);
+            return buildPlannedExercise(
+              newExercise,
+              eqMap,
+              progress,
+              pe.sets.length,
+              Math.random,
+              activeIntensity
+            );
           }),
         };
       }),
@@ -146,22 +202,32 @@ export function App() {
     await storageRepo.saveWorkoutSession(finalized);
     await storageRepo.saveActiveSession(null);
 
+    const isLightSession = finalized.intensity === 'light';
     const updatedProgress = { ...progress };
+
     for (const block of finalized.blocks) {
-      // Only track double-progression targets on Strength & Core lifts
       if (block.type !== 'strength' && block.type !== 'core') continue;
       for (const pe of block.exercises) {
         const hasActivity = pe.effort || pe.sets.some((s) => s.completed);
         if (!hasActivity) continue;
         const nextEntry = computeUpdatedProgress(pe, pe.effort ?? 'just_right');
-        const prevCount = updatedProgress[pe.exerciseId]?.totalSessions ?? 0;
-        nextEntry.totalSessions = prevCount + 1;
+        const prevEntry = updatedProgress[pe.exerciseId];
+        nextEntry.totalSessions = (prevEntry?.totalSessions ?? 0) + 1;
+
+        // Safeguard: deliberate Light recovery days never overwrite a higher normal working weight downward
+        if (isLightSession && prevEntry && prevEntry.currentWeight > nextEntry.currentWeight) {
+          nextEntry.currentWeight = prevEntry.currentWeight;
+          nextEntry.lastReps = prevEntry.lastReps;
+          nextEntry.lastEffort = prevEntry.lastEffort;
+        }
+
         updatedProgress[pe.exerciseId] = nextEntry;
         await storageRepo.saveExerciseProgress(nextEntry);
       }
     }
 
-    setSessions([finalized, ...sessions]);
+    const nextSessions = [finalized, ...sessions];
+    setSessions(nextSessions);
     setProgress(updatedProgress);
     setInProgressSession(null);
     setPlannedSession(finalized);
@@ -187,9 +253,7 @@ export function App() {
     const data = await storageRepo.initializeAndLoad();
     setEquipment(nextEq);
     setExercises(data.exercises);
-    setPlannedSession(
-      generateWorkoutSession(duration, nextEq, data.exercises, sessions, progress)
-    );
+    rebuildPlan(duration, targets, intensity, nextEq, data.exercises);
   };
 
   const handleSaveEquipment = async (item: Equipment) => {
@@ -199,26 +263,20 @@ export function App() {
       ? equipment.map((e) => (e.id === item.id ? item : e))
       : [...equipment, item];
     setEquipment(nextEq);
-    setPlannedSession(
-      generateWorkoutSession(duration, nextEq, exercises, sessions, progress)
-    );
+    rebuildPlan(duration, targets, intensity, nextEq, exercises);
   };
 
   const handleSaveExercise = async (ex: Exercise) => {
     await storageRepo.saveExercise(ex);
     const nextExercises = [...exercises, ex];
     setExercises(nextExercises);
-    setPlannedSession(
-      generateWorkoutSession(duration, equipment, nextExercises, sessions, progress)
-    );
+    rebuildPlan(duration, targets, intensity, equipment, nextExercises);
   };
 
   const handleExitPlayer = () => {
     setIsPlaying(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    setPlannedSession(
-      generateWorkoutSession(duration, equipment, exercises, sessions, progress)
-    );
+    rebuildPlan(duration, targets, intensity);
   };
 
   const switchTab = (tab: Tab) => {
@@ -269,6 +327,11 @@ export function App() {
           <TodayView
             duration={duration}
             onChangeDuration={handleChangeDuration}
+            intensity={intensity}
+            onChangeIntensity={handleChangeIntensity}
+            targets={targets}
+            onToggleTarget={handleToggleTarget}
+            onClearTargets={handleClearTargets}
             session={plannedSession}
             inProgressSession={inProgressSession}
             recentSessions={sessions}

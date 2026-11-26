@@ -6,9 +6,13 @@ import type {
   Exercise,
   ExerciseProgress,
   MovementPattern,
+  MuscleGroup,
   PlannedExercise,
   PlannedSet,
   SessionDuration,
+  SessionIntensity,
+  SessionOptions,
+  TargetArea,
   WorkoutBlock,
   WorkoutSession,
 } from '../types/gym';
@@ -19,6 +23,7 @@ import {
   getRecentActiveExerciseIds,
   pickBalancedExercise,
   resolvePlane,
+  resolveTargetAreas,
 } from './balance';
 
 function uid(prefix: string, rng: () => number = Math.random): string {
@@ -105,15 +110,56 @@ export function getNextTarget(
   return { weight: nextWeight, reps: nextReps, isFirstTime: false };
 }
 
+/**
+ * Adjusts base double-progression prescription for today's chosen session intensity:
+ * - light: steps down 1 plate increment (when available) at minReps for restorative form
+ * - medium: standard double-progression working weight and reps
+ * - hard: working weight pushed to top of repRange (maxReps)
+ */
+export function applyIntensityToTarget(
+  base: { weight: number; reps: number; isFirstTime: boolean },
+  exercise: Exercise,
+  equipment: Equipment | undefined,
+  intensity: SessionIntensity
+): { weight: number; reps: number; isFirstTime: boolean } {
+  if (intensity === 'medium') return base;
+
+  const [minReps, maxReps] = exercise.repRange;
+  const sortedWeights = equipment ? [...equipment.weightOptions].sort((a, b) => a - b) : [];
+
+  if (intensity === 'light') {
+    if (sortedWeights.length > 0 && base.weight > 0) {
+      const idx = sortedWeights.indexOf(snapToAvailableWeight(base.weight, equipment));
+      const lighterWeight = sortedWeights[Math.max(0, idx - 1)];
+      return { weight: lighterWeight, reps: minReps, isFirstTime: base.isFirstTime };
+    }
+    return { weight: 0, reps: minReps, isFirstTime: base.isFirstTime };
+  }
+
+  // intensity === 'hard'
+  return {
+    weight: base.weight,
+    reps: maxReps,
+    isFirstTime: base.isFirstTime,
+  };
+}
+
 export function buildPlannedExercise(
   exercise: Exercise,
   equipmentMap: Map<string, Equipment>,
   progressMap: Record<string, ExerciseProgress>,
   setCount: number,
-  rng: () => number = Math.random
+  rng: () => number = Math.random,
+  intensity: SessionIntensity = 'medium'
 ): PlannedExercise {
   const equipment = equipmentMap.get(exercise.equipmentId);
-  const { weight, reps, isFirstTime } = getNextTarget(exercise, equipment, progressMap[exercise.id]);
+  const baseTarget = getNextTarget(exercise, equipment, progressMap[exercise.id]);
+  const { weight, reps, isFirstTime } = applyIntensityToTarget(
+    baseTarget,
+    exercise,
+    equipment,
+    intensity
+  );
 
   const sets: PlannedSet[] = Array.from({ length: setCount }, (_, idx) => ({
     setNumber: idx + 1,
@@ -150,11 +196,9 @@ function pickRotatedExercise(
 type StrengthSlot = MovementPattern | 'lower_any';
 
 const STRENGTH_SLOTS: Record<SessionDuration, StrengthSlot[]> = {
-  // 20-min has one lower slot: pick squat vs hinge by whichever was trained less recently.
   20: ['upper_push', 'upper_pull', 'lower_any'],
   30: ['upper_push', 'upper_pull', 'lower_squat', 'lower_hinge'],
   45: ['upper_push', 'upper_pull', 'lower_squat', 'lower_hinge'],
-  // Doubled push/pull: the in-session running score forces the opposite plane on the 2nd pick.
   60: ['upper_push', 'upper_pull', 'lower_squat', 'upper_push', 'upper_pull', 'lower_hinge'],
 };
 
@@ -168,6 +212,12 @@ const BLOCK_CONFIG: Record<
   60: { warmupCount: 3, strengthSets: 3, coreCount: 2, cardioMin: 8, stretchCount: 2 },
 };
 
+const TARGET_STRENGTH_SLOTS: Record<SessionIntensity, Record<SessionDuration, number>> = {
+  light: { 20: 2, 30: 3, 45: 4, 60: 5 },
+  medium: { 20: 3, 30: 4, 45: 4, 60: 6 },
+  hard: { 20: 3, 30: 4, 45: 5, 60: 6 },
+};
+
 export function generateWorkoutSession(
   durationMin: SessionDuration,
   equipmentList: Equipment[],
@@ -175,8 +225,12 @@ export function generateWorkoutSession(
   recentSessions: WorkoutSession[],
   progressMap: Record<string, ExerciseProgress>,
   rng: () => number = Math.random,
-  now: () => Date = () => new Date()
+  now: () => Date = () => new Date(),
+  options?: SessionOptions
 ): WorkoutSession {
+  const intensity: SessionIntensity = options?.intensity ?? 'medium';
+  const targets: TargetArea[] = options?.targets ?? [];
+
   const equipmentMap = new Map(equipmentList.map((e) => [e.id, e]));
   const exerciseMap = new Map(exerciseList.map((e) => [e.id, e]));
   const availableEquipmentIds = new Set(
@@ -189,8 +243,24 @@ export function generateWorkoutSession(
   const recentIds = getRecentActiveExerciseIds(recentSessions, 2);
   const planeHistory = computePlaneRecency(recentSessions, exerciseMap);
   const sessionPicks = emptyPlaneScores();
+  const sessionMuscleCounts: Partial<Record<MuscleGroup, number>> = {};
   const pickedIds = new Set<string>();
-  const config = BLOCK_CONFIG[durationMin];
+  const baseConfig = BLOCK_CONFIG[durationMin];
+
+  const strengthSets =
+    intensity === 'light'
+      ? 2
+      : intensity === 'hard'
+      ? baseConfig.strengthSets + 1
+      : baseConfig.strengthSets;
+
+  const coreSets = intensity === 'hard' ? 3 : 2;
+  const cardioMin =
+    intensity === 'light'
+      ? Math.max(2, baseConfig.cardioMin - 1)
+      : intensity === 'hard'
+      ? baseConfig.cardioMin + 2
+      : baseConfig.cardioMin;
 
   const blocks: WorkoutBlock[] = [];
 
@@ -201,61 +271,157 @@ export function generateWorkoutSession(
       const chosen = pickRotatedExercise(pool, recentIds, pickedIds, rng);
       if (!chosen) break;
       pickedIds.add(chosen.id);
-      out.push(buildPlannedExercise(chosen, equipmentMap, progressMap, sets, rng));
+      out.push(buildPlannedExercise(chosen, equipmentMap, progressMap, sets, rng, intensity));
     }
     return out;
   };
 
+  const recordStrengthPick = (chosen: Exercise) => {
+    pickedIds.add(chosen.id);
+    const plane = resolvePlane(chosen);
+    if (plane) sessionPicks[plane] += 1;
+    const leadMuscle = chosen.primaryMuscles?.[0];
+    if (leadMuscle) {
+      sessionMuscleCounts[leadMuscle] = (sessionMuscleCounts[leadMuscle] ?? 0) + 1;
+    }
+  };
+
   // 1. Warm-up / Mobility
-  const warmupExercises = pickSimpleBlock('warmup', config.warmupCount, 1);
+  const warmupExercises = pickSimpleBlock('warmup', baseConfig.warmupCount, 1);
   if (warmupExercises.length > 0) {
     blocks.push({
       type: 'warmup',
       title: 'Warm-up & Mobility',
-      estimatedMinutes: config.warmupCount * 2,
+      estimatedMinutes: baseConfig.warmupCount * 2,
       exercises: warmupExercises,
     });
   }
 
-  // 2. Strength Stations — balanced against the previous 2 sessions by movement plane
+  // 2. Strength Stations — Balanced full-body OR targeted macro focus
   const strengthExercises: PlannedExercise[] = [];
   const strengthPool = eligibleExercises.filter((e) => e.block === 'strength');
+  const strengthTargets: TargetArea[] = targets.filter((t) => t !== 'abs');
+  const absOnly = targets.length === 1 && targets[0] === 'abs';
 
-  for (const slot of STRENGTH_SLOTS[durationMin]) {
-    const pattern: MovementPattern =
-      slot === 'lower_any' ? chooseLowerPattern(planeHistory, sessionPicks) : slot;
-    let candidates = strengthPool.filter((e) => e.pattern === pattern && !pickedIds.has(e.id));
-    if (candidates.length === 0 && slot === 'lower_any') {
-      // Fall back to the other lower pattern if equipment for the preferred one is unavailable
-      const other = pattern === 'lower_squat' ? 'lower_hinge' : 'lower_squat';
-      candidates = strengthPool.filter((e) => e.pattern === other && !pickedIds.has(e.id));
+  if (targets.length === 0) {
+    // Balanced Full-Body Mode (preserves compound functional movement rotation)
+    const slots =
+      intensity === 'light' && durationMin === 30
+        ? (['upper_push', 'upper_pull', 'lower_any'] as StrengthSlot[])
+        : STRENGTH_SLOTS[durationMin];
+
+    for (const slot of slots) {
+      const pattern: MovementPattern =
+        slot === 'lower_any' ? chooseLowerPattern(planeHistory, sessionPicks) : slot;
+      let candidates = strengthPool.filter((e) => e.pattern === pattern && !pickedIds.has(e.id));
+      if (candidates.length === 0 && slot === 'lower_any') {
+        const other = pattern === 'lower_squat' ? 'lower_hinge' : 'lower_squat';
+        candidates = strengthPool.filter((e) => e.pattern === other && !pickedIds.has(e.id));
+      }
+      const chosen = pickBalancedExercise(
+        candidates,
+        recentIds,
+        planeHistory,
+        sessionPicks,
+        rng,
+        sessionMuscleCounts
+      );
+      if (!chosen) continue;
+      recordStrengthPick(chosen);
+      strengthExercises.push(
+        buildPlannedExercise(chosen, equipmentMap, progressMap, strengthSets, rng, intensity)
+      );
     }
-    const chosen = pickBalancedExercise(candidates, recentIds, planeHistory, sessionPicks, rng);
-    if (!chosen) continue;
-    pickedIds.add(chosen.id);
-    const plane = resolvePlane(chosen);
-    if (plane) sessionPicks[plane] += 1;
-    strengthExercises.push(
-      buildPlannedExercise(chosen, equipmentMap, progressMap, config.strengthSets, rng)
-    );
+  } else if (absOnly) {
+    // Abs-focused session: keep 1–2 compound posture lifts alongside expanded Core block
+    const supportSlots: StrengthSlot[] =
+      durationMin >= 45 ? ['upper_pull', 'lower_any'] : ['lower_any'];
+    for (const slot of supportSlots) {
+      const pattern: MovementPattern =
+        slot === 'lower_any' ? chooseLowerPattern(planeHistory, sessionPicks) : slot;
+      const candidates = strengthPool.filter((e) => e.pattern === pattern && !pickedIds.has(e.id));
+      const chosen = pickBalancedExercise(
+        candidates,
+        recentIds,
+        planeHistory,
+        sessionPicks,
+        rng,
+        sessionMuscleCounts
+      );
+      if (!chosen) continue;
+      recordStrengthPick(chosen);
+      strengthExercises.push(
+        buildPlannedExercise(chosen, equipmentMap, progressMap, strengthSets, rng, intensity)
+      );
+    }
+  } else {
+    // Targeted Macro Focus Mode (round-robin across selected areas: legs, chest, back, shoulders, arms)
+    const slotCount = TARGET_STRENGTH_SLOTS[intensity][durationMin];
+
+    for (let i = 0; i < slotCount; i++) {
+      const targetArea = strengthTargets[i % strengthTargets.length];
+      const unused = strengthPool.filter((e) => !pickedIds.has(e.id));
+
+      // Tier 1: Direct primary muscle match for targetArea
+      let candidates = unused.filter((ex) =>
+        resolveTargetAreas(ex).primary.includes(targetArea)
+      );
+
+      // Tier 2: Synergistic secondary muscle match (e.g., compound presses/rows once arm isolations are all picked)
+      if (candidates.length === 0) {
+        candidates = unused.filter((ex) =>
+          resolveTargetAreas(ex).secondary.includes(targetArea)
+        );
+      }
+
+      // Tier 3: Other selected targets if one narrow target exhausted its equipment
+      if (candidates.length === 0 && strengthTargets.length > 1) {
+        candidates = unused.filter((ex) =>
+          resolveTargetAreas(ex).primary.some((a) => strengthTargets.includes(a))
+        );
+      }
+
+      const chosen = pickBalancedExercise(
+        candidates,
+        recentIds,
+        planeHistory,
+        sessionPicks,
+        rng,
+        sessionMuscleCounts
+      );
+      if (!chosen) continue;
+      recordStrengthPick(chosen);
+      strengthExercises.push(
+        buildPlannedExercise(chosen, equipmentMap, progressMap, strengthSets, rng, intensity)
+      );
+    }
   }
 
   if (strengthExercises.length > 0) {
     blocks.push({
       type: 'strength',
       title: 'Strength Stations',
-      estimatedMinutes: Math.round(durationMin * 0.55),
+      estimatedMinutes: Math.max(6, strengthExercises.length * strengthSets * 2),
       exercises: strengthExercises,
     });
   }
 
   // 3. Abs / Core
-  const coreExercises = pickSimpleBlock('core', config.coreCount, 2);
+  const wantsAbs = targets.includes('abs');
+  const coreCount = absOnly
+    ? durationMin >= 45
+      ? 4
+      : 3
+    : wantsAbs
+    ? Math.min(4, baseConfig.coreCount + 1)
+    : baseConfig.coreCount;
+
+  const coreExercises = pickSimpleBlock('core', coreCount, coreSets);
   if (coreExercises.length > 0) {
     blocks.push({
       type: 'core',
       title: 'Abs & Core',
-      estimatedMinutes: config.coreCount * 3,
+      estimatedMinutes: coreExercises.length * 3,
       exercises: coreExercises,
     });
   }
@@ -266,18 +432,19 @@ export function generateWorkoutSession(
     blocks.push({
       type: 'cardio',
       title: 'Cardio Cooldown',
-      estimatedMinutes: config.cardioMin,
+      estimatedMinutes: cardioMin,
       exercises: cardioExercises,
     });
   }
 
   // 5. Stretching / Flexibility
-  const stretchExercises = pickSimpleBlock('stretch', config.stretchCount, 1);
+  const stretchCount = intensity === 'light' ? Math.max(2, baseConfig.stretchCount) : baseConfig.stretchCount;
+  const stretchExercises = pickSimpleBlock('stretch', stretchCount, 1);
   if (stretchExercises.length > 0) {
     blocks.push({
       type: 'stretch',
       title: 'Flexibility & Reset',
-      estimatedMinutes: config.stretchCount * 2,
+      estimatedMinutes: stretchExercises.length * 2,
       exercises: stretchExercises,
     });
   }
@@ -288,13 +455,15 @@ export function generateWorkoutSession(
     status: 'planned',
     createdAt: now().toISOString(),
     durationMin,
+    intensity,
+    targets,
     blocks,
   };
 }
 
 /**
- * Swap candidates for an occupied machine. When recentSessions is provided, candidates are
- * ordered to preserve balance: same plane first, then not recently used, then lowest plane score.
+ * Swap candidates for an occupied machine. Preserves macro focus / movement pattern and
+ * orders by: same plane/muscle first, then not recently used, then lowest plane score.
  */
 export function getSwapCandidates(
   currentExercise: Exercise,
@@ -310,11 +479,20 @@ export function getSwapCandidates(
     for (const pe of b.exercises) usedIds.add(pe.exerciseId);
   }
 
+  const currentPrimary = resolveTargetAreas(currentExercise).primary;
+
   const candidates = exerciseList.filter((ex) => {
     if (!availableEq.has(ex.equipmentId)) return false;
     if (ex.id === currentExercise.id || usedIds.has(ex.id)) return false;
     if (blockType === 'strength') {
-      return ex.block === 'strength' && ex.pattern === currentExercise.pattern;
+      if (ex.block !== 'strength') return false;
+      if (currentExercise.pattern === 'upper_isolation') {
+        return resolveTargetAreas(ex).primary.some((a) => currentPrimary.includes(a));
+      }
+      return (
+        ex.pattern === currentExercise.pattern ||
+        resolveTargetAreas(ex).primary.some((a) => currentPrimary.includes(a))
+      );
     }
     return ex.block === blockType;
   });
@@ -326,9 +504,10 @@ export function getSwapCandidates(
   const history = computePlaneRecency(recentSessions, exerciseMap);
   const currentPlane = resolvePlane(currentExercise);
 
-  const rank = (ex: Exercise): [number, number, number] => {
+  const rank = (ex: Exercise): [number, number, number, number] => {
     const plane = resolvePlane(ex);
     return [
+      ex.pattern === currentExercise.pattern ? 0 : 1,
       plane === currentPlane ? 0 : 1,
       recentIds.has(ex.id) ? 1 : 0,
       plane ? history[plane] : 0,
@@ -338,7 +517,7 @@ export function getSwapCandidates(
   return [...candidates].sort((a, b) => {
     const ra = rank(a);
     const rb = rank(b);
-    return ra[0] - rb[0] || ra[1] - rb[1] || ra[2] - rb[2];
+    return ra[0] - rb[0] || ra[1] - rb[1] || ra[2] - rb[2] || ra[3] - rb[3];
   });
 }
 

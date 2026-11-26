@@ -2,13 +2,15 @@ import type {
   Exercise,
   MovementPattern,
   MovementPlane,
+  MuscleGroup,
   PlannedExercise,
+  TargetArea,
   WorkoutSession,
 } from '../types/gym';
 
 /**
  * Pure session-balancing helpers. No storage or React imports so the engine stays
- * deterministic and unit-testable (rng is always injected by the caller).
+ * deterministic, 100% offline, and unit-testable (rng is always injected by the caller).
  */
 
 export const ALL_PLANES: MovementPlane[] = [
@@ -27,7 +29,7 @@ const PATTERN_DEFAULT_PLANE: Partial<Record<MovementPattern, MovementPlane>> = {
   lower_hinge: 'hinge',
 };
 
-/** Weight applied to planes already picked earlier in the same session (beats history). */
+/** Weight applied to planes/muscles already picked earlier in the same session (beats history). */
 export const IN_SESSION_WEIGHT = 3;
 
 export type PlaneScores = Record<MovementPlane, number>;
@@ -44,9 +46,63 @@ export function emptyPlaneScores(): PlaneScores {
 }
 
 /** Explicit tag wins; otherwise derive from pattern. Non-strength patterns resolve to undefined. */
-export function resolvePlane(ex: Pick<Exercise, 'plane' | 'pattern'> | undefined): MovementPlane | undefined {
+export function resolvePlane(
+  ex: Pick<Exercise, 'plane' | 'pattern'> | undefined
+): MovementPlane | undefined {
   if (!ex) return undefined;
   return ex.plane ?? PATTERN_DEFAULT_PLANE[ex.pattern];
+}
+
+const MUSCLE_TO_AREA: Record<MuscleGroup, TargetArea> = {
+  chest: 'chest',
+  shoulders: 'shoulders',
+  rear_delts: 'shoulders',
+  lats: 'back',
+  mid_back: 'back',
+  biceps: 'arms',
+  triceps: 'arms',
+  quads: 'legs',
+  glutes: 'legs',
+  hamstrings: 'legs',
+  core: 'abs',
+};
+
+/**
+ * Maps any exercise (including untagged custom user exercises) to primary & synergistic
+ * secondary macro TargetAreas so Focus filtering works offline with zero configuration.
+ */
+export function resolveTargetAreas(ex: Exercise): {
+  primary: TargetArea[];
+  secondary: TargetArea[];
+} {
+  if (ex.block === 'core') {
+    return { primary: ['abs'], secondary: [] };
+  }
+
+  if (ex.primaryMuscles && ex.primaryMuscles.length > 0) {
+    const firstArea = MUSCLE_TO_AREA[ex.primaryMuscles[0]];
+    const primary: TargetArea[] = [firstArea];
+    const secondary: TargetArea[] = [];
+
+    for (let i = 1; i < ex.primaryMuscles.length; i++) {
+      const area = MUSCLE_TO_AREA[ex.primaryMuscles[i]];
+      if (area === firstArea) continue;
+      // Compound lifts list synergists second (e.g. ['chest', 'triceps'] -> chest primary, arms secondary)
+      if (!secondary.includes(area)) secondary.push(area);
+    }
+    return { primary, secondary };
+  }
+
+  // Fallback for custom exercises without explicit muscle tags
+  const plane = resolvePlane(ex);
+  if (ex.pattern === 'upper_isolation') return { primary: ['arms'], secondary: [] };
+  if (plane === 'horizontal_push') return { primary: ['chest'], secondary: ['arms', 'shoulders'] };
+  if (plane === 'vertical_push') return { primary: ['shoulders'], secondary: ['arms'] };
+  if (plane === 'horizontal_pull' || plane === 'vertical_pull') {
+    return { primary: ['back'], secondary: ['arms'] };
+  }
+  if (plane === 'squat' || plane === 'hinge') return { primary: ['legs'], secondary: [] };
+  return { primary: [], secondary: [] };
 }
 
 /** Number of sets that actually count as work done. Skipped exercises return 0. */
@@ -109,7 +165,7 @@ export function computePlaneRecency(
 /**
  * Ranking order for a strength slot:
  *   1. Not used in the last 2 sessions (no exact repeats)
- *   2. Lowest plane score (history + IN_SESSION_WEIGHT × picks already in this session)
+ *   2. Lowest plane + lead-muscle score (alternates push/pull planes & biceps/triceps)
  *   3. rng tie-break among exact ties
  */
 export function pickBalancedExercise(
@@ -117,20 +173,24 @@ export function pickBalancedExercise(
   recentIds: Set<string>,
   history: PlaneScores,
   sessionPicks: PlaneScores,
-  rng: () => number
+  rng: () => number,
+  sessionMuscleCounts?: Partial<Record<MuscleGroup, number>>
 ): Exercise | undefined {
   if (candidates.length === 0) return undefined;
 
   const keyed = candidates.map((ex) => {
     const plane = resolvePlane(ex);
     const planeScore = plane ? history[plane] + IN_SESSION_WEIGHT * sessionPicks[plane] : 0;
-    return { ex, repeat: recentIds.has(ex.id) ? 1 : 0, planeScore };
+    const leadMuscle = ex.primaryMuscles?.[0];
+    const muscleScore =
+      leadMuscle && sessionMuscleCounts ? IN_SESSION_WEIGHT * (sessionMuscleCounts[leadMuscle] ?? 0) : 0;
+    return { ex, repeat: recentIds.has(ex.id) ? 1 : 0, totalScore: planeScore + muscleScore };
   });
 
   const minRepeat = Math.min(...keyed.map((k) => k.repeat));
   const tier1 = keyed.filter((k) => k.repeat === minRepeat);
-  const minScore = Math.min(...tier1.map((k) => k.planeScore));
-  const tied = tier1.filter((k) => k.planeScore === minScore);
+  const minScore = Math.min(...tier1.map((k) => k.totalScore));
+  const tied = tier1.filter((k) => k.totalScore === minScore);
 
   const idx = Math.min(tied.length - 1, Math.floor(rng() * tied.length));
   return tied[idx].ex;

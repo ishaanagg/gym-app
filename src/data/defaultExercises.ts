@@ -59,6 +59,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'upper_push',
     plane: 'horizontal_push',
+    primaryMuscles: ['chest', 'triceps'],
     repRange: [8, 12],
     visualKey: 'chest_press',
     safetyCues: [
@@ -74,6 +75,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'upper_push',
     plane: 'vertical_push',
+    primaryMuscles: ['shoulders', 'triceps'],
     repRange: [8, 12],
     visualKey: 'overhead_press',
     safetyCues: [
@@ -89,6 +91,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'upper_push',
     plane: 'horizontal_push',
+    primaryMuscles: ['chest', 'triceps'],
     repRange: [10, 14],
     visualKey: 'chest_press',
     safetyCues: [
@@ -104,6 +107,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'upper_push',
     plane: 'horizontal_push',
+    primaryMuscles: ['chest', 'triceps'],
     repRange: [8, 12],
     visualKey: 'chest_press',
     safetyCues: [
@@ -121,6 +125,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'upper_pull',
     plane: 'vertical_pull',
+    primaryMuscles: ['lats', 'biceps'],
     repRange: [8, 12],
     visualKey: 'lat_pulldown',
     safetyCues: [
@@ -136,6 +141,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'upper_pull',
     plane: 'horizontal_pull',
+    primaryMuscles: ['mid_back', 'biceps'],
     repRange: [8, 12],
     visualKey: 'seated_row',
     safetyCues: [
@@ -151,6 +157,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'upper_pull',
     plane: 'horizontal_pull',
+    primaryMuscles: ['mid_back', 'lats'],
     repRange: [8, 12],
     visualKey: 'seated_row',
     safetyCues: [
@@ -166,12 +173,91 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'upper_pull',
     plane: 'horizontal_pull',
+    primaryMuscles: ['rear_delts', 'shoulders'],
     repRange: [12, 15],
     visualKey: 'seated_row',
     safetyCues: [
       'Set cable at upper-chest height and pull toward your forehead.',
       'Finish with thumbs pointing back and elbows high.',
       'Use light-to-moderate weight with zero lower-back lean.',
+    ],
+  },
+
+  // ── STRENGTH: ARMS & SHOULDERS TARGETED ─────────────────────────────
+  {
+    id: 'ex-db-bicep-curl',
+    name: 'Dumbbell Bicep Curls',
+    equipmentId: 'eq-dumbbells',
+    block: 'strength',
+    pattern: 'upper_isolation',
+    primaryMuscles: ['biceps'],
+    repRange: [10, 14],
+    visualKey: 'arm_curl',
+    safetyCues: [
+      'Pin elbows softly at your sides without swinging your torso.',
+      'Supinate wrists as you curl up and squeeze at the top.',
+      'Lower all the way down under a smooth 2-second count.',
+    ],
+  },
+  {
+    id: 'ex-cable-tricep-pushdown',
+    name: 'Cable Tricep Pushdown',
+    equipmentId: 'eq-cable',
+    block: 'strength',
+    pattern: 'upper_isolation',
+    primaryMuscles: ['triceps'],
+    repRange: [10, 15],
+    visualKey: 'tricep_extension',
+    safetyCues: [
+      'Stand tall with elbows tucked comfortably at your ribs.',
+      'Extend forearms straight down without letting shoulders roll forward.',
+      'Control the return until forearms are just above parallel.',
+    ],
+  },
+  {
+    id: 'ex-db-hammer-curl',
+    name: 'Dumbbell Hammer Curls',
+    equipmentId: 'eq-dumbbells',
+    block: 'strength',
+    pattern: 'upper_isolation',
+    primaryMuscles: ['biceps'],
+    repRange: [10, 14],
+    visualKey: 'arm_curl',
+    safetyCues: [
+      'Keep palms facing each other in a neutral grip throughout.',
+      'Brace your core so only your forearms move.',
+      'Pause briefly at the top before lowering smoothly.',
+    ],
+  },
+  {
+    id: 'ex-cable-overhead-tricep',
+    name: 'Overhead Cable Tricep Extension',
+    equipmentId: 'eq-cable',
+    block: 'strength',
+    pattern: 'upper_isolation',
+    primaryMuscles: ['triceps'],
+    repRange: [10, 14],
+    visualKey: 'tricep_extension',
+    safetyCues: [
+      'Take a split stance facing away from the cable with ribs braced.',
+      'Keep elbows pointed forward as you extend hands overhead.',
+      'Enjoy a controlled stretch behind your head without overarching.',
+    ],
+  },
+  {
+    id: 'ex-db-lateral-raise',
+    name: 'Dumbbell Lateral Raises',
+    equipmentId: 'eq-dumbbells',
+    block: 'strength',
+    pattern: 'upper_isolation',
+    plane: 'vertical_push',
+    primaryMuscles: ['shoulders'],
+    repRange: [12, 15],
+    visualKey: 'overhead_press',
+    safetyCues: [
+      'Keep a soft bend in your elbows and raise slightly forward (~20°).',
+      'Stop at shoulder height with neck and traps relaxed.',
+      'Choose a light weight you can lift with zero momentum.',
     ],
   },
 
@@ -183,6 +269,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'lower_squat',
     plane: 'squat',
+    primaryMuscles: ['quads', 'glutes'],
     repRange: [10, 14],
     visualKey: 'squat',
     safetyCues: [
@@ -198,6 +285,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'lower_squat',
     plane: 'squat',
+    primaryMuscles: ['quads', 'glutes'],
     repRange: [8, 12],
     visualKey: 'squat',
     safetyCues: [
@@ -213,6 +301,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'lower_squat',
     plane: 'squat',
+    primaryMuscles: ['quads', 'glutes'],
     repRange: [8, 10],
     visualKey: 'squat',
     safetyCues: [
@@ -230,6 +319,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'lower_hinge',
     plane: 'hinge',
+    primaryMuscles: ['hamstrings', 'glutes'],
     repRange: [8, 12],
     visualKey: 'hinge',
     safetyCues: [
@@ -245,6 +335,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     block: 'strength',
     pattern: 'lower_hinge',
     plane: 'hinge',
+    primaryMuscles: ['glutes', 'hamstrings'],
     repRange: [10, 14],
     visualKey: 'hinge',
     safetyCues: [
@@ -261,6 +352,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-mat',
     block: 'core',
     pattern: 'core',
+    primaryMuscles: ['core'],
     repRange: [8, 12],
     visualKey: 'core_plank',
     safetyCues: [
@@ -275,6 +367,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-cable',
     block: 'core',
     pattern: 'core',
+    primaryMuscles: ['core'],
     repRange: [10, 12],
     visualKey: 'core_rotation',
     safetyCues: [
@@ -289,6 +382,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-mat',
     block: 'core',
     pattern: 'core',
+    primaryMuscles: ['core'],
     repRange: [10, 16],
     durationSec: 45,
     isTimed: true,
@@ -297,6 +391,21 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Set feet wider than shoulder-width for anti-rotation stability.',
       'Keep hips level — imagine balancing a glass of water on your low back.',
       'Tap each shoulder slowly without rushing.',
+    ],
+  },
+  {
+    id: 'ex-db-russian-twist',
+    name: 'Controlled Russian Twists',
+    equipmentId: 'eq-dumbbells',
+    block: 'core',
+    pattern: 'core',
+    primaryMuscles: ['core'],
+    repRange: [10, 14],
+    visualKey: 'core_rotation',
+    safetyCues: [
+      'Sit tall with heels lightly planted and chest proud, not rounded.',
+      'Rotate your ribcage smoothly side to side rather than swinging arms.',
+      'Breathe steadily and move with control.',
     ],
   },
 

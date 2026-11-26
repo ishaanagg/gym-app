@@ -68,6 +68,36 @@ export const FormVisual: React.FC<FormVisualProps> = ({ visualKey, label }) => {
           </svg>
         );
 
+      case 'arm_curl':
+        return (
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Arm curl posture'}>
+            <line x1="64" y1="102" x2="156" y2="102" stroke="#263244" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="102" cy="28" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M102 36V74M102 74L92 100M102 74L112 100" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Start forearm extended down */}
+            <path d="M102 44L104 60L110 80" stroke="#64748B" strokeWidth="2.5" strokeDasharray="3 3" strokeLinecap="round" />
+            {/* Pinned elbow + curled forearm */}
+            <path d="M102 44L104 62L126 44" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="104" cy="62" r="3" fill="#10B981" />
+            <path d="M138 74C146 62 146 48 136 38M134 45L135 37L143 39" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        );
+
+      case 'tricep_extension':
+        return (
+          <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Tricep extension posture'}>
+            <line x1="64" y1="102" x2="156" y2="102" stroke="#263244" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="100" cy="28" r="8" stroke="#E2E8F0" strokeWidth="2.5" />
+            <path d="M98 36L96 74M96 74L86 100M96 74L108 100" stroke="#E2E8F0" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Bent forearm start */}
+            <path d="M98 44L102 60L124 50" stroke="#64748B" strokeWidth="2.5" strokeDasharray="3 3" strokeLinecap="round" />
+            {/* Extended forearm down */}
+            <path d="M98 44L102 60L112 82" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="102" cy="60" r="3" fill="#10B981" />
+            <path d="M140 46V78M134 71L140 79L146 71" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        );
+
       case 'squat':
         return (
           <svg viewBox="0 0 220 112" width="210" height="106" fill="none" aria-label={label ?? 'Squat posture'}>

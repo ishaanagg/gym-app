@@ -1,6 +1,12 @@
 import { useEffect } from 'react';
 import { getRecentCompletedSessions, resolvePlane } from '../engine/balance';
-import type { Exercise, MovementPlane, WorkoutSession } from '../types/gym';
+import type {
+  Exercise,
+  MovementPlane,
+  SessionIntensity,
+  TargetArea,
+  WorkoutSession,
+} from '../types/gym';
 
 /** Subtle haptic pulse on devices that support Vibration API (safe no-op on iOS/desktop). */
 export function triggerHaptic(ms: number | number[] = 10): void {
@@ -69,15 +75,37 @@ const PLANE_SHORT_LABEL: Record<MovementPlane, string> = {
   hinge: 'Hinge',
 };
 
+export const TARGET_AREA_LABELS: Record<TargetArea, string> = {
+  legs: 'Legs',
+  chest: 'Chest',
+  back: 'Back',
+  shoulders: 'Shoulders',
+  arms: 'Arms',
+  abs: 'Abs',
+};
+
+const INTENSITY_DESC: Record<SessionIntensity, string> = {
+  light: 'Light restorative pace',
+  medium: 'Steady working effort',
+  hard: 'High-volume push',
+};
+
 /**
- * Generates a calm, human-readable 1-line explanation of today's strength movement planes
- * so the user can see how the session complements their recent workouts.
+ * Generates a calm, human-readable 1-line explanation of today's session plan.
  */
 export function describeSessionFocus(
   session: WorkoutSession,
   exercises: Exercise[],
   recentSessions: WorkoutSession[]
 ): string {
+  const targets = session.targets ?? [];
+  const intensity = session.intensity ?? 'medium';
+
+  if (targets.length > 0) {
+    const areaNames = targets.map((t) => TARGET_AREA_LABELS[t]).join(' + ');
+    return `${areaNames} · ${INTENSITY_DESC[intensity]}.`;
+  }
+
   const strengthBlock = session.blocks.find((b) => b.type === 'strength');
   if (!strengthBlock || strengthBlock.exercises.length === 0) {
     return 'Mobility, cardio, and recovery flow.';
@@ -95,9 +123,12 @@ export function describeSessionFocus(
 
   const focusList = labels.slice(0, 3).join(' · ');
   const recentCount = getRecentCompletedSessions(recentSessions, 2).length;
+  const paceSuffix = intensity !== 'medium' ? ` (${intensity})` : '';
 
   if (recentCount === 0) {
-    return `${focusList} — balanced full-body baseline.`;
+    return `${focusList}${paceSuffix} — balanced full-body baseline.`;
   }
-  return `${focusList} — complements your last ${recentCount === 1 ? 'workout' : '2 workouts'}.`;
+  return `${focusList}${paceSuffix} — complements your last ${
+    recentCount === 1 ? 'workout' : '2 workouts'
+  }.`;
 }

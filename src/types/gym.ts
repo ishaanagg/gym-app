@@ -5,6 +5,7 @@ export type WeightUnit = 'lbs' | 'kg';
 export type MovementPattern =
   | 'upper_push'
   | 'upper_pull'
+  | 'upper_isolation'
   | 'lower_squat'
   | 'lower_hinge'
   | 'core'
@@ -21,7 +22,6 @@ export type MovementPlane =
   | 'squat'
   | 'hinge';
 
-/** Optional muscle tags reserved for V2/V3 (calibration, photo detection). Not used in V1 scoring. */
 export type MuscleGroup =
   | 'chest'
   | 'shoulders'
@@ -34,6 +34,16 @@ export type MuscleGroup =
   | 'glutes'
   | 'hamstrings'
   | 'core';
+
+/** User-selectable macro focus areas on Today screen. Empty array = Balanced full-body. */
+export type TargetArea = 'legs' | 'chest' | 'back' | 'shoulders' | 'arms' | 'abs';
+
+export type SessionIntensity = 'light' | 'medium' | 'hard';
+
+export interface SessionOptions {
+  targets?: TargetArea[];
+  intensity?: SessionIntensity;
+}
 
 export type BlockType = 'warmup' | 'strength' | 'core' | 'cardio' | 'stretch';
 
@@ -48,6 +58,8 @@ export type VisualKey =
   | 'overhead_press'
   | 'lat_pulldown'
   | 'seated_row'
+  | 'arm_curl'
+  | 'tricep_extension'
   | 'squat'
   | 'hinge'
   | 'core_plank'
@@ -116,6 +128,8 @@ export interface WorkoutSession {
   createdAt: string;
   completedAt?: string;
   durationMin: SessionDuration;
+  intensity?: SessionIntensity;
+  targets?: TargetArea[];
   blocks: WorkoutBlock[];
 }
 

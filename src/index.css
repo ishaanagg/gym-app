@@ -224,6 +224,41 @@ body {
   opacity: 1;
 }
 
+.segmented-control.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.focus-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.focus-pill {
+  appearance: none;
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-base);
+  color: var(--text-secondary);
+  border-radius: var(--radius-pill);
+  min-height: 36px;
+  padding: 6px 13px;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.focus-pill:active {
+  transform: scale(0.95);
+}
+
+.focus-pill.active {
+  background: var(--accent-emerald-soft);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: var(--accent-emerald-bright);
+}
+
 /* Buttons */
 .btn {
   appearance: none;

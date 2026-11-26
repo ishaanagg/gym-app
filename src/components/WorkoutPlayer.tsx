@@ -473,7 +473,9 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
       (s) => s.setNumber !== setNumber && !s.completed
     ).length;
     if (remainingIncomplete > 0) {
-      setRestSeconds(60);
+      const defaultRest =
+        session.intensity === 'light' ? 45 : session.intensity === 'hard' ? 75 : 60;
+      setRestSeconds(defaultRest);
     } else {
       setRestSeconds(0);
     }

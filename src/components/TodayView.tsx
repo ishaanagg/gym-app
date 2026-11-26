@@ -6,14 +6,21 @@ import type {
   Exercise,
   PlannedExercise,
   SessionDuration,
+  SessionIntensity,
+  TargetArea,
   WorkoutSession,
 } from '../types/gym';
-import { describeSessionFocus, triggerHaptic } from '../utils/ux';
+import { describeSessionFocus, TARGET_AREA_LABELS, triggerHaptic } from '../utils/ux';
 import { SwapModal } from './SwapModal';
 
 interface TodayViewProps {
   duration: SessionDuration;
   onChangeDuration: (d: SessionDuration) => void;
+  intensity: SessionIntensity;
+  onChangeIntensity: (i: SessionIntensity) => void;
+  targets: TargetArea[];
+  onToggleTarget: (t: TargetArea) => void;
+  onClearTargets: () => void;
   session: WorkoutSession;
   inProgressSession: WorkoutSession | null;
   recentSessions: WorkoutSession[];
@@ -28,10 +35,21 @@ interface TodayViewProps {
 }
 
 const DURATIONS: SessionDuration[] = [20, 30, 45, 60];
+const INTENSITIES: { id: SessionIntensity; label: string }[] = [
+  { id: 'light', label: 'Light' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'hard', label: 'Hard' },
+];
+const TARGET_OPTIONS: TargetArea[] = ['legs', 'chest', 'back', 'shoulders', 'arms', 'abs'];
 
 export const TodayView: React.FC<TodayViewProps> = ({
   duration,
   onChangeDuration,
+  intensity,
+  onChangeIntensity,
+  targets,
+  onToggleTarget,
+  onClearTargets,
   session,
   inProgressSession,
   recentSessions,
@@ -94,11 +112,11 @@ export const TodayView: React.FC<TodayViewProps> = ({
         </div>
       )}
 
-      {/* Hero Control Card */}
+      {/* Hero Control Card: Duration + Intensity + Macro Focus + Begin */}
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span className="exercise-meta">
-            {totalMovements} movements · 5 balanced phases
+            {totalMovements} movements · {session.blocks.length} phases
           </span>
           <button
             type="button"
@@ -113,6 +131,7 @@ export const TodayView: React.FC<TodayViewProps> = ({
           </button>
         </div>
 
+        {/* Duration */}
         <div className="segmented-control" role="radiogroup" aria-label="Workout duration">
           {DURATIONS.map((d) => (
             <button
@@ -130,6 +149,68 @@ export const TodayView: React.FC<TodayViewProps> = ({
               <span className="unit">m</span>
             </button>
           ))}
+        </div>
+
+        {/* Intensity */}
+        <div>
+          <div className="section-label" style={{ marginBottom: 6 }}>
+            Intensity
+          </div>
+          <div className="segmented-control cols-3" role="radiogroup" aria-label="Workout intensity">
+            {INTENSITIES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={intensity === item.id}
+                className={`segment-btn ${intensity === item.id ? 'active' : ''}`}
+                style={{ fontSize: '0.84rem' }}
+                onClick={() => {
+                  triggerHaptic(8);
+                  onChangeIntensity(item.id);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Macro Muscle Focus */}
+        <div>
+          <div className="section-label" style={{ marginBottom: 6 }}>
+            Focus Areas
+          </div>
+          <div className="focus-pills" role="group" aria-label="Target muscle groups">
+            <button
+              type="button"
+              className={`focus-pill ${targets.length === 0 ? 'active' : ''}`}
+              aria-pressed={targets.length === 0}
+              onClick={() => {
+                triggerHaptic(8);
+                onClearTargets();
+              }}
+            >
+              Balanced
+            </button>
+            {TARGET_OPTIONS.map((area) => {
+              const selected = targets.includes(area);
+              return (
+                <button
+                  key={area}
+                  type="button"
+                  className={`focus-pill ${selected ? 'active' : ''}`}
+                  aria-pressed={selected}
+                  onClick={() => {
+                    triggerHaptic(8);
+                    onToggleTarget(area);
+                  }}
+                >
+                  {TARGET_AREA_LABELS[area]}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <button

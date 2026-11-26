@@ -4,13 +4,25 @@ import type { Exercise } from '../types/gym';
 /**
  * Pure, idempotent backfill for persisted exercise rows (no IndexedDB imports, unit-testable).
  * - Existing explicit tags are never overwritten.
- * - Default-library rows inherit the library's plane tag.
+ * - Default-library rows inherit the library's plane and primaryMuscles tags.
  * - Custom rows fall back to the pattern-derived plane.
  */
 export function backfillExercise(row: Exercise, defaultsById: Map<string, Exercise>): Exercise {
-  if (row.plane) return row;
-  const plane = defaultsById.get(row.id)?.plane ?? resolvePlane(row);
-  return plane ? { ...row, plane } : row;
+  const def = defaultsById.get(row.id);
+  const nextPlane = row.plane ?? def?.plane ?? resolvePlane(row);
+  const nextMuscles =
+    row.primaryMuscles && row.primaryMuscles.length > 0 ? row.primaryMuscles : def?.primaryMuscles;
+
+  const planeChanged = nextPlane !== row.plane && nextPlane !== undefined;
+  const musclesChanged = nextMuscles !== row.primaryMuscles && nextMuscles !== undefined;
+
+  if (!planeChanged && !musclesChanged) return row;
+
+  return {
+    ...row,
+    ...(nextPlane ? { plane: nextPlane } : {}),
+    ...(nextMuscles ? { primaryMuscles: nextMuscles } : {}),
+  };
 }
 
 /**

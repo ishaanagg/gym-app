@@ -24,6 +24,7 @@ interface MyGymViewProps {
 const PATTERN_TO_VISUAL: Record<MovementPattern, VisualKey> = {
   upper_push: 'chest_press',
   upper_pull: 'lat_pulldown',
+  upper_isolation: 'arm_curl',
   lower_squat: 'squat',
   lower_hinge: 'hinge',
   core: 'core_plank',
@@ -433,8 +434,9 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
                 value={exPattern}
                 onChange={(e) => setExPattern(e.target.value as MovementPattern)}
               >
-                <option value="upper_push">Upper Push</option>
-                <option value="upper_pull">Upper Pull</option>
+                <option value="upper_push">Upper Push (Chest / Shoulders)</option>
+                <option value="upper_pull">Upper Pull (Back)</option>
+                <option value="upper_isolation">Arms (Biceps / Triceps)</option>
                 <option value="lower_squat">Lower Squat</option>
                 <option value="lower_hinge">Lower Hinge</option>
                 <option value="core">Abs &amp; Core</option>

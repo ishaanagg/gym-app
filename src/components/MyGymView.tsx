@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { Dumbbell, Edit3, Plus, Power, Trash2, X } from 'lucide-react';
+import { Dumbbell, Edit3, Plus, Power, Sparkles, Trash2, X } from 'lucide-react';
 import { DEFAULT_GYM_ID } from '../data/defaultInventory';
+import {
+  EQUIPMENT_ARCHETYPES,
+  inferArchetypeFromName,
+  type EquipmentArchetype,
+} from '../data/knowledgeBase';
 import type {
   BlockType,
   Equipment,
@@ -16,7 +21,7 @@ interface MyGymViewProps {
   gymName: string;
   equipment: Equipment[];
   exercises: Exercise[];
-  onSaveEquipment: (item: Equipment) => Promise<void>;
+  onSaveEquipment: (item: Equipment, archetypeId?: string) => Promise<void>;
   onSaveExercise: (exercise: Exercise) => Promise<void>;
   onDeleteEquipment: (id: string) => Promise<void>;
 }
@@ -53,8 +58,11 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
   onDeleteEquipment,
 }) => {
   const [editing, setEditing] = useState<Equipment | null>(null);
+  const [isNewEquipment, setIsNewEquipment] = useState(false);
+  const [selectedArchetypeId, setSelectedArchetypeId] = useState<string | undefined>(undefined);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [weightsInput, setWeightsInput] = useState('');
+
   const [addingExerciseFor, setAddingExerciseFor] = useState<Equipment | null>(null);
   const [exName, setExName] = useState('');
   const [exPattern, setExPattern] = useState<MovementPattern>('upper_push');
@@ -62,6 +70,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
   const [exOrientation, setExOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
 
   const openEditor = (item?: Equipment) => {
+    const creating = !item;
     const target: Equipment = item ?? {
       id: `eq-${Math.random().toString(36).slice(2, 8)}`,
       gymId: DEFAULT_GYM_ID,
@@ -72,9 +81,23 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
       isAvailable: true,
       notes: '',
     };
+    setIsNewEquipment(creating);
+    setSelectedArchetypeId(undefined);
     setEditing(target);
     setConfirmDelete(false);
     setWeightsInput(target.weightOptions.join(', '));
+  };
+
+  const applyPreset = (arch: EquipmentArchetype) => {
+    if (!editing) return;
+    setSelectedArchetypeId(arch.id);
+    setEditing({
+      ...editing,
+      name: arch.label,
+      category: arch.category,
+      weightOptions: arch.defaultWeightsLbs,
+    });
+    setWeightsInput(arch.defaultWeightsLbs.join(', '));
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -89,11 +112,14 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
 
     const uniqueWeights = Array.from(new Set(parsedWeights));
 
-    await onSaveEquipment({
-      ...editing,
-      name: editing.name.trim(),
-      weightOptions: uniqueWeights,
-    });
+    await onSaveEquipment(
+      {
+        ...editing,
+        name: editing.name.trim(),
+        weightOptions: uniqueWeights,
+      },
+      isNewEquipment ? selectedArchetypeId : undefined
+    );
     setEditing(null);
   };
 
@@ -138,19 +164,26 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
     await onSaveEquipment({ ...item, isAvailable: !item.isAvailable });
   };
 
+  const detectedArchetype =
+    editing && isNewEquipment
+      ? selectedArchetypeId
+        ? EQUIPMENT_ARCHETYPES.find((a) => a.id === selectedArchetypeId)
+        : inferArchetypeFromName(editing.name)
+      : undefined;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <h1 className="page-title">{gymName}</h1>
           <p className="page-subtitle">
-            Customize machines, exact plate increments, and linked movements.
+            Add or remove gear anytime — workouts adapt automatically offline.
           </p>
         </div>
         <button
           type="button"
           className="btn btn-secondary"
-          style={{ padding: '10px 12px', fontSize: '0.84rem' }}
+          style={{ padding: '10px 14px', fontSize: '0.86rem' }}
           onClick={() => openEditor()}
         >
           <Plus size={16} /> Add
@@ -164,7 +197,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
           <div
             key={item.id}
             className="card"
-            style={{ opacity: item.isAvailable ? 1 : 0.55, transition: 'opacity 0.15s ease' }}
+            style={{ opacity: item.isAvailable ? 1 : 0.52, transition: 'opacity 0.15s ease' }}
           >
             <div className="card-header" style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -185,7 +218,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
                   className="btn-ghost"
                   onClick={() => toggleAvailable(item)}
                   aria-label={`Toggle ${item.name}`}
-                  style={{ color: item.isAvailable ? 'var(--accent-emerald)' : 'var(--text-muted)' }}
+                  style={{ color: item.isAvailable ? 'var(--accent-emerald-bright)' : 'var(--text-muted)' }}
                 >
                   <Power size={14} /> {item.isAvailable ? 'On' : 'Off'}
                 </button>
@@ -218,26 +251,26 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 paddingTop: 8,
-                borderTop: '1px solid var(--border-subtle)',
+                borderTop: '1px solid var(--border-hairline)',
               }}
             >
               <span className="exercise-meta">
-                {linkedCount} {linkedCount === 1 ? 'exercise' : 'exercises'} linked
+                {linkedCount} {linkedCount === 1 ? 'movement' : 'movements'} linked
               </span>
               <button
                 type="button"
                 className="btn-ghost"
                 onClick={() => setAddingExerciseFor(item)}
-                style={{ color: 'var(--accent-emerald)' }}
+                style={{ color: 'var(--accent-emerald-bright)' }}
               >
-                <Plus size={14} /> Add Exercise
+                <Plus size={14} /> Custom Move
               </button>
             </div>
           </div>
         );
       })}
 
-      {/* Equipment Editor Modal */}
+      {/* Equipment Editor / Preset Picker Modal */}
       {editing && (
         <div className="modal-backdrop" onClick={() => setEditing(null)}>
           <form
@@ -249,7 +282,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
             <div className="sheet-handle" />
             <div className="card-header" style={{ marginBottom: 0 }}>
               <h2 style={{ margin: 0, fontSize: '1.08rem' }}>
-                {editing.name ? `Edit ${editing.name}` : 'Add Equipment'}
+                {isNewEquipment ? 'Add Gym Equipment' : `Edit ${editing.name}`}
               </h2>
               <button
                 type="button"
@@ -261,6 +294,26 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
               </button>
             </div>
 
+            {isNewEquipment && (
+              <div>
+                <div className="section-label" style={{ marginBottom: 6 }}>
+                  Quick-Add Presets (Auto-Links Exercises)
+                </div>
+                <div className="focus-pills">
+                  {EQUIPMENT_ARCHETYPES.map((arch) => (
+                    <button
+                      key={arch.id}
+                      type="button"
+                      className={`focus-pill ${selectedArchetypeId === arch.id ? 'active' : ''}`}
+                      onClick={() => applyPreset(arch)}
+                    >
+                      {arch.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="section-label" style={{ display: 'block', marginBottom: 6 }}>
                 Machine / Equipment Name
@@ -268,10 +321,25 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
               <input
                 className="input-field"
                 value={editing.name}
-                onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                placeholder="e.g., LifeFitness Chest Press"
+                onChange={(e) => {
+                  setSelectedArchetypeId(undefined);
+                  setEditing({ ...editing, name: e.target.value });
+                }}
+                placeholder="e.g., LifeFitness Leg Curl or Kettlebells"
                 required
               />
+              {detectedArchetype && (
+                <div
+                  className="exercise-meta"
+                  style={{ marginTop: 6, color: 'var(--accent-emerald-bright)', display: 'flex', alignItems: 'center', gap: 5 }}
+                >
+                  <Sparkles size={13} />
+                  <span>
+                    Auto-adds {detectedArchetype.exercises.length} coach-cued{' '}
+                    {detectedArchetype.exercises.length === 1 ? 'movement' : 'movements'}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
@@ -289,7 +357,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
                   <option value="machine">Pin-Loaded Machine</option>
                   <option value="free_weight">Free Weight</option>
                   <option value="cardio">Cardio Machine</option>
-                  <option value="bodyweight">Mat / Bodyweight</option>
+                  <option value="bodyweight">Bodyweight / Bands / TRX</option>
                 </select>
               </div>
               <div>
@@ -320,7 +388,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
                 placeholder="15, 30, 45, 60, 75, 90"
               />
               <div className="exercise-meta" style={{ marginTop: 4 }}>
-                Leave empty for cardio or bodyweight equipment.
+                Leave empty for cardio, bodyweight, TRX, or bands.
               </div>
             </div>
 
@@ -332,7 +400,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
                 className="input-field"
                 value={editing.notes ?? ''}
                 onChange={(e) => setEditing({ ...editing, notes: e.target.value })}
-                placeholder="e.g., Seat setting 4, pin-loaded"
+                placeholder="e.g., Seat setting 4"
               />
             </div>
 
@@ -340,7 +408,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
               Save Equipment
             </button>
 
-            {equipment.some((e) => e.id === editing.id) &&
+            {!isNewEquipment &&
               (!confirmDelete ? (
                 <button
                   type="button"
@@ -362,17 +430,22 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
                   }}
                 >
                   <span style={{ fontSize: '0.86rem' }}>
-                    Remove <strong>{editing.name}</strong> from your gym? Past workouts and progress are kept.
-                    Tip: use <strong>Off</strong> instead if it's just temporarily broken.
+                    Remove <strong>{editing.name}</strong> from your gym? Past workouts are kept.
+                    Tip: use <strong>Off</strong> if it&apos;s only temporarily out of order.
                   </span>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setConfirmDelete(false)}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ flex: 1 }}
+                      onClick={() => setConfirmDelete(false)}
+                    >
                       Cancel
                     </button>
                     <button
                       type="button"
-                      className="btn"
-                      style={{ flex: 1, background: 'var(--accent-rose)', color: '#fff' }}
+                      className="btn btn-danger"
+                      style={{ flex: 1 }}
                       onClick={async () => {
                         await onDeleteEquipment(editing.id);
                         setEditing(null);
@@ -387,7 +460,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
         </div>
       )}
 
-      {/* Add Exercise to Equipment Modal */}
+      {/* Link Custom Exercise Modal */}
       {addingExerciseFor && (
         <div className="modal-backdrop" onClick={() => setAddingExerciseFor(null)}>
           <form
@@ -400,7 +473,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
             <div className="card-header" style={{ marginBottom: 0 }}>
               <div>
                 <span className="section-label">{addingExerciseFor.name}</span>
-                <h2 style={{ margin: '4px 0 0 0', fontSize: '1.08rem' }}>Link New Exercise</h2>
+                <h2 style={{ margin: '4px 0 0 0', fontSize: '1.08rem' }}>Link Custom Movement</h2>
               </div>
               <button
                 type="button"
@@ -476,7 +549,7 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
             </div>
 
             <button type="submit" className="btn btn-primary">
-              Add Exercise to Machine
+              Add Movement
             </button>
           </form>
         </div>

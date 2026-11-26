@@ -1,13 +1,14 @@
 import type { Exercise } from '../types/gym';
 
 export const DEFAULT_EXERCISES: Exercise[] = [
-  // ── WARM-UP / MOBILITY ──────────────────────────────────────────────
+  // ── WARM-UP / MOBILITY (Jenny Pacey & Dalton Wong Joint Priming) ────
   {
     id: 'ex-worlds-greatest',
     name: "World's Greatest Stretch",
     equipmentId: 'eq-mat',
     block: 'warmup',
     pattern: 'mobility',
+    primaryMuscles: ['glutes', 'hamstrings', 'mid_back'],
     repRange: [5, 8],
     durationSec: 60,
     isTimed: true,
@@ -24,6 +25,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-mat',
     block: 'warmup',
     pattern: 'mobility',
+    primaryMuscles: ['mid_back', 'shoulders', 'chest'],
     repRange: [8, 12],
     durationSec: 60,
     isTimed: true,
@@ -40,6 +42,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-mat',
     block: 'warmup',
     pattern: 'mobility',
+    primaryMuscles: ['quads', 'hamstrings', 'glutes'],
     repRange: [8, 10],
     durationSec: 60,
     isTimed: true,
@@ -48,6 +51,23 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Hinge down to touch your toes, then drop hips into a deep squat.',
       'Press knees gently outward with your elbows.',
       'Raise chest tall before standing back up.',
+    ],
+  },
+  {
+    id: 'ex-scapular-wall-slides',
+    name: 'Scapular Wall Slides & Arm Circles',
+    equipmentId: 'eq-mat',
+    block: 'warmup',
+    pattern: 'mobility',
+    primaryMuscles: ['shoulders', 'chest', 'lats'],
+    repRange: [8, 12],
+    durationSec: 60,
+    isTimed: true,
+    visualKey: 'overhead_press',
+    safetyCues: [
+      'Stand tall with ribs tucked and glide forearms smoothly overhead.',
+      'Open chest wide without shrugging your upper traps.',
+      'Finish with slow, controlled 360° shoulder circles.',
     ],
   },
 
@@ -116,6 +136,22 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Press evenly until arms are extended without locking elbows.',
     ],
   },
+  {
+    id: 'ex-bw-pushup',
+    name: 'Tempo Push-Ups (Incline or Floor)',
+    equipmentId: 'eq-mat',
+    block: 'strength',
+    pattern: 'upper_push',
+    plane: 'horizontal_push',
+    primaryMuscles: ['chest', 'triceps'],
+    repRange: [8, 15],
+    visualKey: 'core_plank',
+    safetyCues: [
+      'Set hands slightly wider than shoulders; elevate hands on a bench if needed.',
+      'Keep glutes and abs engaged in one straight plank line.',
+      'Lower for 2 seconds with elbows tucked ~45° from your ribs.',
+    ],
+  },
 
   // ── STRENGTH: UPPER PULL ────────────────────────────────────────────
   {
@@ -167,6 +203,22 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     ],
   },
   {
+    id: 'ex-db-single-arm-row',
+    name: 'Single-Arm Staggered Dumbbell Row',
+    equipmentId: 'eq-dumbbells',
+    block: 'strength',
+    pattern: 'upper_pull',
+    plane: 'horizontal_pull',
+    primaryMuscles: ['lats', 'mid_back'],
+    repRange: [8, 12],
+    visualKey: 'seated_row',
+    safetyCues: [
+      'Support your non-working hand on a bench or front thigh with square hips.',
+      'Row the dumbbell back toward your hip in a smooth arc.',
+      'Resist torso twist to build anti-rotation back strength.',
+    ],
+  },
+  {
     id: 'ex-cable-face-pull',
     name: 'Cable Face Pulls',
     equipmentId: 'eq-cable',
@@ -180,6 +232,22 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Set cable at upper-chest height and pull toward your forehead.',
       'Finish with thumbs pointing back and elbows high.',
       'Use light-to-moderate weight with zero lower-back lean.',
+    ],
+  },
+  {
+    id: 'ex-bw-prone-ytw',
+    name: 'Prone Y-T-W Posture Raises',
+    equipmentId: 'eq-mat',
+    block: 'strength',
+    pattern: 'upper_pull',
+    plane: 'horizontal_pull',
+    primaryMuscles: ['mid_back', 'rear_delts'],
+    repRange: [10, 14],
+    visualKey: 'core_plank',
+    safetyCues: [
+      'Lie face-down on the mat with forehead neutral and glutes lightly engaged.',
+      'Lift thumbs toward the ceiling in Y, T, and W positions without shrugging.',
+      'Pause 1 second at the top to wake up upper-back posture muscles.',
     ],
   },
 
@@ -260,8 +328,23 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Choose a light weight you can lift with zero momentum.',
     ],
   },
+  {
+    id: 'ex-bw-diamond-pushup',
+    name: 'Close-Grip Tricep Push-Ups',
+    equipmentId: 'eq-mat',
+    block: 'strength',
+    pattern: 'upper_isolation',
+    primaryMuscles: ['triceps', 'chest'],
+    repRange: [8, 14],
+    visualKey: 'core_plank',
+    safetyCues: [
+      'Place hands shoulder-width or slightly narrower (knees or toes).',
+      'Keep elbows grazing your ribs as you lower under control.',
+      'Press smoothly through your palms while keeping core tight.',
+    ],
+  },
 
-  // ── STRENGTH: LOWER SQUAT ───────────────────────────────────────────
+  // ── STRENGTH: LOWER SQUAT & FRONTAL PLANE ───────────────────────────
   {
     id: 'ex-leg-press',
     name: 'Leg Press',
@@ -310,6 +393,38 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Drive up through your front heel and mid-foot.',
     ],
   },
+  {
+    id: 'ex-db-lateral-lunge',
+    name: 'Dumbbell Lateral Goblet Lunge',
+    equipmentId: 'eq-dumbbells',
+    block: 'strength',
+    pattern: 'lower_squat',
+    plane: 'squat',
+    primaryMuscles: ['glutes', 'quads'],
+    repRange: [8, 12],
+    visualKey: 'squat',
+    safetyCues: [
+      'Step wide to the side while keeping both feet pointing forward.',
+      'Sit hips back over the stepping heel with the trail leg straight.',
+      'Push firmly off the outside heel to return tall to center.',
+    ],
+  },
+  {
+    id: 'ex-bw-reverse-lunge',
+    name: 'Alternating Bodyweight Reverse Lunges',
+    equipmentId: 'eq-mat',
+    block: 'strength',
+    pattern: 'lower_squat',
+    plane: 'squat',
+    primaryMuscles: ['quads', 'glutes'],
+    repRange: [10, 16],
+    visualKey: 'squat',
+    safetyCues: [
+      'Step backward softly and lower until your front thigh is near parallel.',
+      'Keep your front knee stacked stably over mid-foot.',
+      'Drive through your front heel to stand tall and switch sides.',
+    ],
+  },
 
   // ── STRENGTH: LOWER HINGE ───────────────────────────────────────────
   {
@@ -344,8 +459,24 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Squeeze glutes to stand tall without hyperextending your low back.',
     ],
   },
+  {
+    id: 'ex-bw-glute-bridge',
+    name: 'Tempo Glute Bridge March',
+    equipmentId: 'eq-mat',
+    block: 'strength',
+    pattern: 'lower_hinge',
+    plane: 'hinge',
+    primaryMuscles: ['glutes', 'hamstrings'],
+    repRange: [10, 16],
+    visualKey: 'core_plank',
+    safetyCues: [
+      'Drive through your heels to lift hips into a straight shoulder-to-knee line.',
+      'Keep ribs tucked so your glutes — not your low back — do the work.',
+      'Hold hips level as you alternate lifting each foot slightly.',
+    ],
+  },
 
-  // ── ABS / CORE ──────────────────────────────────────────────────────
+  // ── ABS / CORE & CARRIES (Gunnar Peterson Functional Core) ──────────
   {
     id: 'ex-dead-bug',
     name: 'Dead Bug',
@@ -408,8 +539,25 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Breathe steadily and move with control.',
     ],
   },
+  {
+    id: 'ex-db-suitcase-carry',
+    name: 'Dumbbell Suitcase Carry',
+    equipmentId: 'eq-dumbbells',
+    block: 'core',
+    pattern: 'core',
+    primaryMuscles: ['core'],
+    repRange: [1, 1],
+    durationSec: 45,
+    isTimed: true,
+    visualKey: 'core_rotation',
+    safetyCues: [
+      'Hold one moderate dumbbell at your side like a heavy suitcase.',
+      'Walk slowly with shoulders completely level — zero sideways lean.',
+      'Switch hands halfway through the timer.',
+    ],
+  },
 
-  // ── CARDIO COOLDOWN ─────────────────────────────────────────────────
+  // ── CARDIO COOLDOWN & CONDITIONING (Joe Wicks Fallback Included) ────
   {
     id: 'ex-treadmill-walk',
     name: 'Brisk Incline Walk',
@@ -442,14 +590,31 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Relax your shoulders and keep breathing steady.',
     ],
   },
+  {
+    id: 'ex-bw-athletic-conditioning',
+    name: 'Low-Impact Athletic March & Reach',
+    equipmentId: 'eq-mat',
+    block: 'cardio',
+    pattern: 'cardio',
+    repRange: [1, 1],
+    durationSec: 240,
+    isTimed: true,
+    visualKey: 'cardio_stride',
+    safetyCues: [
+      'Alternate brisk high-knee marches with overhead reaches and step-jacks.',
+      'Keep landings whisper-quiet on the balls of your feet.',
+      'Slow your pace in the final 60 seconds with deep nasal breaths.',
+    ],
+  },
 
-  // ── STRETCHING / FLEXIBILITY ────────────────────────────────────────
+  // ── STRETCHING / FLEXIBILITY (Dalton Wong Decompression) ────────────
   {
     id: 'ex-hip-flexor-stretch',
     name: 'Half-Kneeling Hip Flexor Stretch',
     equipmentId: 'eq-mat',
     block: 'stretch',
     pattern: 'stretch',
+    primaryMuscles: ['quads', 'glutes'],
     repRange: [1, 1],
     durationSec: 60,
     isTimed: true,
@@ -466,6 +631,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     equipmentId: 'eq-mat',
     block: 'stretch',
     pattern: 'stretch',
+    primaryMuscles: ['lats', 'mid_back'],
     repRange: [1, 1],
     durationSec: 60,
     isTimed: true,
@@ -474,6 +640,40 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Sink hips back toward your heels and walk hands forward.',
       'Walk both hands slightly left, then right, to stretch each lat.',
       'Let your forehead rest and exhale tension on each breath.',
+    ],
+  },
+  {
+    id: 'ex-chest-pec-opener',
+    name: 'Kneeling Chest & Thoracic Opener',
+    equipmentId: 'eq-mat',
+    block: 'stretch',
+    pattern: 'stretch',
+    primaryMuscles: ['chest', 'shoulders'],
+    repRange: [1, 1],
+    durationSec: 60,
+    isTimed: true,
+    visualKey: 'mobility_flow',
+    safetyCues: [
+      'Clasp hands gently behind your back (or place forearm on a doorframe).',
+      'Draw shoulder blades down and open your collarbone wide.',
+      'Take 5 slow breaths expanding your ribcage.',
+    ],
+  },
+  {
+    id: 'ex-figure-four-stretch',
+    name: 'Supine Figure-4 Glute & Hamstring Stretch',
+    equipmentId: 'eq-mat',
+    block: 'stretch',
+    pattern: 'stretch',
+    primaryMuscles: ['glutes', 'hamstrings'],
+    repRange: [1, 1],
+    durationSec: 60,
+    isTimed: true,
+    visualKey: 'stretch_reach',
+    safetyCues: [
+      'Lie on your back, cross one ankle over the opposite knee, and draw thigh in.',
+      'Keep your head and shoulders relaxed flat on the mat.',
+      'Switch sides halfway through for balanced hip release.',
     ],
   },
 ];

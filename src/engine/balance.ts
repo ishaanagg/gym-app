@@ -179,16 +179,24 @@ export function pickBalancedExercise(
   if (candidates.length === 0) return undefined;
 
   const keyed = candidates.map((ex) => {
+    const isFloorFallback = ex.block === 'strength' && ex.equipmentId === 'eq-mat' ? 1 : 0;
     const plane = resolvePlane(ex);
     const planeScore = plane ? history[plane] + IN_SESSION_WEIGHT * sessionPicks[plane] : 0;
     const leadMuscle = ex.primaryMuscles?.[0];
     const muscleScore =
       leadMuscle && sessionMuscleCounts ? IN_SESSION_WEIGHT * (sessionMuscleCounts[leadMuscle] ?? 0) : 0;
-    return { ex, repeat: recentIds.has(ex.id) ? 1 : 0, totalScore: planeScore + muscleScore };
+    return {
+      ex,
+      isFloorFallback,
+      repeat: recentIds.has(ex.id) ? 1 : 0,
+      totalScore: planeScore + muscleScore,
+    };
   });
 
-  const minRepeat = Math.min(...keyed.map((k) => k.repeat));
-  const tier1 = keyed.filter((k) => k.repeat === minRepeat);
+  const minFallback = Math.min(...keyed.map((k) => k.isFloorFallback));
+  const tier0 = keyed.filter((k) => k.isFloorFallback === minFallback);
+  const minRepeat = Math.min(...tier0.map((k) => k.repeat));
+  const tier1 = tier0.filter((k) => k.repeat === minRepeat);
   const minScore = Math.min(...tier1.map((k) => k.totalScore));
   const tied = tier1.filter((k) => k.totalScore === minScore);
 

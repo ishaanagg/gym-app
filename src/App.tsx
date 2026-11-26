@@ -5,6 +5,7 @@ import { ProgressView } from './components/ProgressView';
 import { SettingsView } from './components/SettingsView';
 import { TodayView } from './components/TodayView';
 import { WorkoutPlayer } from './components/WorkoutPlayer';
+import { buildExercisesForEquipment } from './data/knowledgeBase';
 import { DEFAULT_SETTINGS, storageRepo } from './db/storage';
 import {
   buildPlannedExercise,
@@ -256,14 +257,25 @@ export function App() {
     rebuildPlan(duration, targets, intensity, nextEq, data.exercises);
   };
 
-  const handleSaveEquipment = async (item: Equipment) => {
+  const handleSaveEquipment = async (item: Equipment, archetypeId?: string) => {
     await storageRepo.saveEquipment(item);
     const exists = equipment.some((e) => e.id === item.id);
     const nextEq = exists
       ? equipment.map((e) => (e.id === item.id ? item : e))
       : [...equipment, item];
+
+    let nextExercises = exercises;
+    if (!exists) {
+      const autoExercises = buildExercisesForEquipment(item, exercises, archetypeId);
+      if (autoExercises.length > 0) {
+        await Promise.all(autoExercises.map((ex) => storageRepo.saveExercise(ex)));
+        nextExercises = [...exercises, ...autoExercises];
+        setExercises(nextExercises);
+      }
+    }
+
     setEquipment(nextEq);
-    rebuildPlan(duration, targets, intensity, nextEq, exercises);
+    rebuildPlan(duration, targets, intensity, nextEq, nextExercises);
   };
 
   const handleSaveExercise = async (ex: Exercise) => {

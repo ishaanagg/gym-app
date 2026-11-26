@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BarChart3, Dumbbell, Flame, Settings as SettingsIcon } from 'lucide-react';
 import { MyGymView } from './components/MyGymView';
+import { OnboardingView } from './components/OnboardingView';
 import { ProgressView } from './components/ProgressView';
 import { SettingsView } from './components/SettingsView';
 import { TodayView } from './components/TodayView';
@@ -47,12 +48,18 @@ export function App() {
 
   const applyLoadedState = useCallback(
     (data: Awaited<ReturnType<typeof storageRepo.initializeAndLoad>>) => {
+      const alreadyActive =
+        Boolean(data.settings.onboardingCompleted) ||
+        data.sessions.length > 0 ||
+        Boolean(data.settings.userName) ||
+        data.settings.gymName !== 'My Building Gym';
+
       setEquipment(data.equipment);
       setExercises(data.exercises);
       setSessions(data.sessions);
       setProgress(data.progress);
       setInProgressSession(data.activeSession);
-      setSettings(data.settings);
+      setSettings({ ...data.settings, onboardingCompleted: alreadyActive });
       setPlannedSession(
         generateWorkoutSession(
           30,
@@ -297,9 +304,12 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const showOnboarding = !loading && !settings.onboardingCompleted;
+  const hideChrome = isPlaying || showOnboarding;
+
   return (
-    <div className={`app-shell ${isPlaying ? 'playing' : ''}`}>
-      {!isPlaying && (
+    <div className={`app-shell ${hideChrome ? 'playing' : ''}`}>
+      {!hideChrome && (
         <header className="app-header">
           <div className="brand-mark">
             <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="Kinetic" width={30} height={30} />
@@ -323,6 +333,16 @@ export function App() {
           <div className="card">
             <p className="page-subtitle">Preparing your session…</p>
           </div>
+        ) : showOnboarding ? (
+          <OnboardingView
+            initialSettings={settings}
+            onComplete={async (nextSettings) => {
+              await handleSaveSettings(nextSettings);
+              setActiveTab('today');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onRestoredFromDrive={hydrateFromStorage}
+          />
         ) : isPlaying ? (
           <WorkoutPlayer
             session={plannedSession}
@@ -381,7 +401,7 @@ export function App() {
         )}
       </main>
 
-      {!isPlaying && (
+      {!hideChrome && (
         <nav className="bottom-nav" aria-label="Main navigation">
           <div className="bottom-nav-inner">
             <button

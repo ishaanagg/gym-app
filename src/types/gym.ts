@@ -147,6 +147,8 @@ export interface ExerciseProgress {
 export interface AppSettings {
   userName: string;
   gymName: string;
+  /** True once the user finishes or skips the first-run onboarding flow. */
+  onboardingCompleted?: boolean;
   /** ISO timestamp of the last successful cloud backup (any provider). */
   lastCloudBackupAt?: string;
   /** Remembers that the user opted into Google Drive backup (no tokens are stored). */

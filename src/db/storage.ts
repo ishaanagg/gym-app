@@ -239,9 +239,14 @@ class IndexedDBStorageRepository implements StorageRepository {
     for (const s of data.sessions ?? []) await tx.objectStore('sessions').put(s);
     for (const p of data.progress ?? []) await tx.objectStore('progress').put(p);
     await tx.objectStore('meta').put({ key: EQUIPMENT_SEEDED_KEY, value: true });
-    if (data.settings) {
-      await tx.objectStore('meta').put({ key: SETTINGS_KEY, value: data.settings });
-    }
+    await tx.objectStore('meta').put({
+      key: SETTINGS_KEY,
+      value: {
+        ...DEFAULT_SETTINGS,
+        ...(data.settings ?? {}),
+        onboardingCompleted: true,
+      },
+    });
     await tx.done;
   }
 }

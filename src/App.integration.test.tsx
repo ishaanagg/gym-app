@@ -208,4 +208,51 @@ describe('Kinetic End-to-End User Journeys', () => {
     expect(state.sessions).toHaveLength(0);
     expect(Object.keys(state.progress)).toHaveLength(0);
   });
+
+  it('handles OS Back gestures natively across modals, secondary tabs, and active workouts', async () => {
+    await storageRepo.initializeAndLoad();
+    await storageRepo.saveSettings({
+      userName: 'John',
+      gymName: 'The Arden',
+      onboardingCompleted: true,
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole('heading', { name: /Ready, John\?/i });
+
+    // 1. Today -> My Gym -> Add Equipment sheet
+    await user.click(screen.getByRole('button', { name: /My Gym/i }));
+    await user.click(await screen.findByRole('button', { name: /^Add$/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // OS Back #1 closes Add Equipment sheet, stays on My Gym
+    window.history.back();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('heading', { name: /The Arden/i })).toBeInTheDocument();
+
+    // OS Back #2 returns from My Gym to Today
+    window.history.back();
+    expect(await screen.findByRole('heading', { name: /Ready, John\?/i })).toBeInTheDocument();
+
+    // 2. Start workout -> OS Back opens Pause/Exit sheet instead of abruptly killing workout
+    await user.click(screen.getByRole('button', { name: /Begin 30-Min Session/i }));
+    expect(await screen.findByRole('button', { name: /Done — Next Movement/i })).toBeInTheDocument();
+
+    window.history.back();
+    expect(
+      await screen.findByRole('heading', { name: /Pause or Exit Session\?/i })
+    ).toBeInTheDocument();
+
+    // OS Back again dismisses the Pause sheet and keeps user right in their workout
+    window.history.back();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('heading', { name: /Pause or Exit Session\?/i })
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: /Done — Next Movement/i })).toBeInTheDocument();
+  });
 });

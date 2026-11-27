@@ -25,6 +25,7 @@ import type {
   TargetArea,
   WorkoutSession,
 } from './types/gym';
+import { useBackGuard } from './utils/backNavigation';
 import { triggerHaptic } from './utils/ux';
 
 type Tab = 'today' | 'progress' | 'gym' | 'settings';
@@ -314,6 +315,12 @@ export function App() {
 
   const showOnboarding = !loading && !settings.onboardingCompleted;
   const hideChrome = isPlaying || showOnboarding;
+
+  useBackGuard(
+    !loading && !showOnboarding && !isPlaying && activeTab !== 'today',
+    () => switchTab('today'),
+    { priority: 'tab' }
+  );
 
   return (
     <div className={`app-shell ${hideChrome ? 'playing' : ''} ${isPlaying ? 'workout-lock' : ''}`}>

@@ -16,6 +16,7 @@ import type {
   VisualKey,
   WeightUnit,
 } from '../types/gym';
+import { useBackGuard } from '../utils/backNavigation';
 
 interface MyGymViewProps {
   gymName: string;
@@ -68,6 +69,11 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
   const [exPattern, setExPattern] = useState<MovementPattern>('upper_push');
   const [exCue, setExCue] = useState('');
   const [exOrientation, setExOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
+
+  useBackGuard(Boolean(editing), () => setEditing(null), { priority: 'modal' });
+  useBackGuard(Boolean(addingExerciseFor), () => setAddingExerciseFor(null), {
+    priority: 'modal',
+  });
 
   const openEditor = (item?: Equipment) => {
     const creating = !item;
@@ -275,6 +281,9 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
         <div className="modal-backdrop" onClick={() => setEditing(null)}>
           <form
             className="modal-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={isNewEquipment ? 'Add Gym Equipment' : `Edit ${editing.name}`}
             onClick={(e) => e.stopPropagation()}
             onSubmit={handleSave}
             style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
@@ -465,6 +474,9 @@ export const MyGymView: React.FC<MyGymViewProps> = ({
         <div className="modal-backdrop" onClick={() => setAddingExerciseFor(null)}>
           <form
             className="modal-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Link Custom Movement"
             onClick={(e) => e.stopPropagation()}
             onSubmit={handleSaveNewExercise}
             style={{ display: 'flex', flexDirection: 'column', gap: 14 }}

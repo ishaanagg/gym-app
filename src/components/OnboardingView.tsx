@@ -3,6 +3,7 @@ import { ArrowRight, Check, Cloud, Dumbbell, RefreshCw, RotateCcw, ShieldCheck, 
 import { storageRepo } from '../db/storage';
 import { googleDriveBackup } from '../sync/googleDrive';
 import type { AppSettings } from '../types/gym';
+import { useBackGuard } from '../utils/backNavigation';
 import { triggerHaptic } from '../utils/ux';
 
 interface OnboardingViewProps {
@@ -23,6 +24,8 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({
   );
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useBackGuard(step === 2 && !busy, () => setStep(1), { priority: 'tab' });
 
   const driveConfigured = googleDriveBackup.isConfigured();
 

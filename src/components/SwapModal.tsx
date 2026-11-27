@@ -9,6 +9,7 @@ import type {
   PlannedExercise,
   WorkoutSession,
 } from '../types/gym';
+import { useBackGuard } from '../utils/backNavigation';
 
 interface SwapModalProps {
   target: {
@@ -33,6 +34,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   onSelect,
   onClose,
 }) => {
+  useBackGuard(true, onClose, { priority: 'modal' });
+
   const equipmentMap = new Map(equipment.map((e) => [e.id, e]));
   const currentPlane = resolvePlane(target.exercise);
 

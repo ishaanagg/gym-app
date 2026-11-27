@@ -21,6 +21,7 @@ import type {
   PlannedExercise,
   WorkoutSession,
 } from '../types/gym';
+import { useBackGuard } from '../utils/backNavigation';
 import { formatClock, triggerHaptic, useWakeLock } from '../utils/ux';
 import { FormVisual } from './FormVisual';
 import { SwapModal } from './SwapModal';
@@ -378,6 +379,19 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
   const [restSeconds, setRestSeconds] = useState<number>(0);
   const advanceTimerRef = useRef<number | null>(null);
   const guideCardRef = useRef<HTMLDivElement | null>(null);
+
+  useBackGuard(
+    true,
+    () => {
+      if (isCompletedView) {
+        onExit();
+      } else {
+        setShowExitSheet(true);
+      }
+    },
+    { priority: 'screen' }
+  );
+  useBackGuard(showExitSheet, () => setShowExitSheet(false), { priority: 'modal' });
 
   useEffect(() => {
     return () => {

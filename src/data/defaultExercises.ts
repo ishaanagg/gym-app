@@ -12,7 +12,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     repRange: [5, 8],
     durationSec: 60,
     isTimed: true,
-    visualKey: 'mobility_flow',
+    visualKey: 'worlds_greatest',
     safetyCues: [
       'Step into a long lunge with your back knee lifted.',
       'Rotate your chest toward your front leg and reach high.',
@@ -29,7 +29,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     repRange: [8, 12],
     durationSec: 60,
     isTimed: true,
-    visualKey: 'mobility_flow',
+    visualKey: 'cat_cow',
     safetyCues: [
       'Move slowly with your breath — exhale to round, inhale to arch.',
       'Keep shoulders packed down away from your ears.',
@@ -46,7 +46,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     repRange: [8, 10],
     durationSec: 60,
     isTimed: true,
-    visualKey: 'squat',
+    visualKey: 'squat_to_stand',
     safetyCues: [
       'Hinge down to touch your toes, then drop hips into a deep squat.',
       'Press knees gently outward with your elbows.',
@@ -63,7 +63,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     repRange: [8, 12],
     durationSec: 60,
     isTimed: true,
-    visualKey: 'overhead_press',
+    visualKey: 'wall_slides',
     safetyCues: [
       'Stand tall with ribs tucked and glide forearms smoothly overhead.',
       'Open chest wide without shrugging your upper traps.',
@@ -145,7 +145,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'horizontal_push',
     primaryMuscles: ['chest', 'triceps', 'shoulders'],
     repRange: [8, 15],
-    visualKey: 'core_plank',
+    visualKey: 'pushup',
     safetyCues: [
       'Set hands slightly wider than shoulders; elevate hands on a bench if needed.',
       'Keep glutes and abs engaged in one straight plank line.',
@@ -161,7 +161,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'vertical_push',
     primaryMuscles: ['shoulders', 'triceps'],
     repRange: [6, 12],
-    visualKey: 'overhead_press',
+    visualKey: 'pike_pushup',
     safetyCues: [
       'Hike hips high into an inverted V with knees softly bent if hamstrings are tight.',
       'Lower the crown of your head slightly in front of your hands.',
@@ -211,7 +211,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'horizontal_pull',
     primaryMuscles: ['mid_back', 'lats'],
     repRange: [8, 12],
-    visualKey: 'seated_row',
+    visualKey: 'bent_row',
     safetyCues: [
       'Hinge at the hips with a flat back and braced core.',
       'Pull dumbbells toward your hips, keeping elbows close.',
@@ -227,7 +227,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'horizontal_pull',
     primaryMuscles: ['lats', 'mid_back'],
     repRange: [8, 12],
-    visualKey: 'seated_row',
+    visualKey: 'bent_row',
     safetyCues: [
       'Support your non-working hand on a bench or front thigh with square hips.',
       'Row the dumbbell back toward your hip in a smooth arc.',
@@ -243,7 +243,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'horizontal_pull',
     primaryMuscles: ['rear_delts', 'shoulders'],
     repRange: [12, 15],
-    visualKey: 'seated_row',
+    visualKey: 'face_pull',
     safetyCues: [
       'Set cable at upper-chest height and pull toward your forehead.',
       'Finish with thumbs pointing back and elbows high.',
@@ -259,7 +259,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'horizontal_pull',
     primaryMuscles: ['mid_back', 'rear_delts'],
     repRange: [10, 14],
-    visualKey: 'core_plank',
+    visualKey: 'prone_ytw',
     safetyCues: [
       'Lie face-down on the mat with forehead neutral and glutes lightly engaged.',
       'Lift thumbs toward the ceiling in Y, T, and W positions without shrugging.',
@@ -337,7 +337,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'vertical_push',
     primaryMuscles: ['shoulders'],
     repRange: [12, 15],
-    visualKey: 'overhead_press',
+    visualKey: 'lateral_raise',
     safetyCues: [
       'Keep a soft bend in your elbows and raise slightly forward (~20°).',
       'Stop at shoulder height with neck and traps relaxed.',
@@ -352,7 +352,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     pattern: 'upper_isolation',
     primaryMuscles: ['triceps', 'chest'],
     repRange: [8, 14],
-    visualKey: 'core_plank',
+    visualKey: 'pushup',
     safetyCues: [
       'Place hands shoulder-width or slightly narrower (knees or toes).',
       'Keep elbows grazing your ribs as you lower under control.',
@@ -370,7 +370,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'squat',
     primaryMuscles: ['quads', 'glutes'],
     repRange: [10, 14],
-    visualKey: 'squat',
+    visualKey: 'leg_press',
     safetyCues: [
       'Place feet shoulder-width apart in the middle of the sled.',
       'Keep your lower back and tailbone pressed flat into the seat.',
@@ -402,7 +402,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'squat',
     primaryMuscles: ['quads', 'glutes'],
     repRange: [8, 10],
-    visualKey: 'squat',
+    visualKey: 'lunge_split',
     safetyCues: [
       'Take a hip-width staggered stance so you feel balanced.',
       'Lower back knee straight down toward the floor under control.',
@@ -418,7 +418,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'squat',
     primaryMuscles: ['glutes', 'quads'],
     repRange: [8, 12],
-    visualKey: 'squat',
+    visualKey: 'lateral_lunge',
     safetyCues: [
       'Step wide to the side while keeping both feet pointing forward.',
       'Sit hips back over the stepping heel with the trail leg straight.',
@@ -434,7 +434,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'squat',
     primaryMuscles: ['quads', 'glutes'],
     repRange: [10, 16],
-    visualKey: 'squat',
+    visualKey: 'lunge_split',
     safetyCues: [
       'Step backward softly and lower until your front thigh is near parallel.',
       'Keep your front knee stacked stably over mid-foot.',
@@ -484,7 +484,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     plane: 'hinge',
     primaryMuscles: ['glutes', 'hamstrings'],
     repRange: [10, 16],
-    visualKey: 'core_plank',
+    visualKey: 'glute_bridge',
     safetyCues: [
       'Drive through your heels to lift hips into a straight shoulder-to-knee line.',
       'Keep ribs tucked so your glutes — not your low back — do the work.',
@@ -501,7 +501,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     pattern: 'core',
     primaryMuscles: ['core'],
     repRange: [8, 12],
-    visualKey: 'core_plank',
+    visualKey: 'dead_bug',
     safetyCues: [
       'Press your lower back gently into the mat the entire time.',
       'Extend opposite arm and leg slowly while exhaling.',
@@ -565,7 +565,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     repRange: [1, 1],
     durationSec: 45,
     isTimed: true,
-    visualKey: 'core_rotation',
+    visualKey: 'suitcase_carry',
     safetyCues: [
       'Hold one moderate dumbbell at your side like a heavy suitcase.',
       'Walk slowly with shoulders completely level — zero sideways lean.',
@@ -599,7 +599,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     repRange: [1, 1],
     durationSec: 300,
     isTimed: true,
-    visualKey: 'cardio_stride',
+    visualKey: 'bike_spin',
     safetyCues: [
       'Adjust seat height so your knee has a slight bend at the bottom.',
       'Maintain a smooth 70–85 RPM cadence at light-moderate resistance.',
@@ -634,7 +634,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     repRange: [1, 1],
     durationSec: 60,
     isTimed: true,
-    visualKey: 'stretch_reach',
+    visualKey: 'hip_flexor_stretch',
     safetyCues: [
       'Tuck your tailbone under slightly before leaning forward.',
       'Reach the same-side arm overhead for a deeper side-body stretch.',
@@ -651,7 +651,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     repRange: [1, 1],
     durationSec: 60,
     isTimed: true,
-    visualKey: 'stretch_reach',
+    visualKey: 'childs_pose',
     safetyCues: [
       'Sink hips back toward your heels and walk hands forward.',
       'Walk both hands slightly left, then right, to stretch each lat.',
@@ -668,7 +668,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     repRange: [1, 1],
     durationSec: 60,
     isTimed: true,
-    visualKey: 'mobility_flow',
+    visualKey: 'chest_opener',
     safetyCues: [
       'Clasp hands gently behind your back (or place forearm on a doorframe).',
       'Draw shoulder blades down and open your collarbone wide.',
@@ -685,7 +685,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     repRange: [1, 1],
     durationSec: 60,
     isTimed: true,
-    visualKey: 'stretch_reach',
+    visualKey: 'figure_four',
     safetyCues: [
       'Lie on your back, cross one ankle over the opposite knee, and draw thigh in.',
       'Keep your head and shoulders relaxed flat on the mat.',

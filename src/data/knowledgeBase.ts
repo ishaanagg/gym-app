@@ -102,7 +102,7 @@ export const EQUIPMENT_ARCHETYPES: EquipmentArchetype[] = [
         plane: 'squat',
         primaryMuscles: ['quads'],
         repRange: [10, 15],
-        visualKey: 'squat',
+        visualKey: 'leg_extension',
         safetyCues: [
           'Align the machine pivot dot directly with your knee joint.',
           'Set the ankle pad just above your shoelaces and hold side handles.',
@@ -125,7 +125,7 @@ export const EQUIPMENT_ARCHETYPES: EquipmentArchetype[] = [
         plane: 'hinge',
         primaryMuscles: ['hamstrings'],
         repRange: [10, 15],
-        visualKey: 'hinge',
+        visualKey: 'leg_curl',
         safetyCues: [
           'Line up your knees with the machine hinge and flex ankles slightly.',
           'Keep hips pressed firmly into the pad throughout each rep.',
@@ -199,7 +199,7 @@ export const EQUIPMENT_ARCHETYPES: EquipmentArchetype[] = [
         plane: 'horizontal_pull',
         primaryMuscles: ['rear_delts', 'mid_back'],
         repRange: [12, 15],
-        visualKey: 'seated_row',
+        visualKey: 'face_pull',
         safetyCues: [
           'Face the pad with chest supported and arms at shoulder height.',
           'Sweep arms wide using the backs of your shoulders, not upper traps.',
@@ -236,7 +236,7 @@ export const EQUIPMENT_ARCHETYPES: EquipmentArchetype[] = [
         plane: 'squat',
         primaryMuscles: ['quads', 'glutes'],
         repRange: [8, 12],
-        visualKey: 'squat',
+        visualKey: 'lunge_split',
         safetyCues: [
           'Step your front foot slightly forward for a vertical shin angle.',
           'Lower straight down with torso upright and core braced.',
@@ -346,7 +346,7 @@ export const EQUIPMENT_ARCHETYPES: EquipmentArchetype[] = [
         plane: 'horizontal_pull',
         primaryMuscles: ['rear_delts', 'mid_back'],
         repRange: [12, 18],
-        visualKey: 'seated_row',
+        visualKey: 'face_pull',
         safetyCues: [
           'Hold band at chest height with elbows straight but unlocked.',
           'Keep shoulders down as you stretch the band across your chest.',

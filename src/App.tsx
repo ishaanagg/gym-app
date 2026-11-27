@@ -298,6 +298,14 @@ export function App() {
     rebuildPlan(duration, targets, intensity);
   };
 
+  const handleDiscardActiveWorkout = async () => {
+    setIsPlaying(false);
+    setInProgressSession(null);
+    await storageRepo.saveActiveSession(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    rebuildPlan(duration, targets, intensity);
+  };
+
   const switchTab = (tab: Tab) => {
     triggerHaptic(6);
     setActiveTab(tab);
@@ -308,7 +316,7 @@ export function App() {
   const hideChrome = isPlaying || showOnboarding;
 
   return (
-    <div className={`app-shell ${hideChrome ? 'playing' : ''}`}>
+    <div className={`app-shell ${hideChrome ? 'playing' : ''} ${isPlaying ? 'workout-lock' : ''}`}>
       {!hideChrome && (
         <header className="app-header">
           <div className="brand-mark">
@@ -353,6 +361,7 @@ export function App() {
             onUpdateSession={handleUpdateActiveSession}
             onSwapExercise={handleSwapExercise}
             onFinishWorkout={handleFinishWorkout}
+            onDiscardSession={handleDiscardActiveWorkout}
             onExit={handleExitPlayer}
           />
         ) : activeTab === 'today' ? (

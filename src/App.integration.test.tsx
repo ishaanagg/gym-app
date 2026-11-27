@@ -154,4 +154,58 @@ describe('Kinetic End-to-End User Journeys', () => {
       expect(state.progress['ex-machine-chest-press']?.currentWeight).toBe(90);
     });
   });
+
+  it('keeps spatial-locked stage containers across steps and discards cleanly via Exit Without Saving', async () => {
+    await storageRepo.initializeAndLoad();
+    await storageRepo.saveSettings({
+      userName: 'John',
+      gymName: 'The Arden',
+      onboardingCompleted: true,
+    });
+
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await screen.findByRole('heading', { name: /Ready, John\?/i });
+
+    await user.click(screen.getByRole('radio', { name: /20/i }));
+    await user.click(screen.getByRole('button', { name: /Begin 20-Min Session/i }));
+
+    // Verify viewport-locked shell & spatial dock on Timed Warm-up step
+    expect(container.querySelector('.app-shell.workout-lock')).not.toBeNull();
+    expect(container.querySelector('.player-shell')).not.toBeNull();
+    expect(container.querySelector('.player-guide-card')).not.toBeNull();
+    expect(container.querySelector('.player-action-card')).not.toBeNull();
+    expect(container.querySelector('.player-nav-bar')).not.toBeNull();
+
+    // Advance to Strength step (2 sets on 20-min Medium)
+    await user.click(await screen.findByRole('button', { name: /Done — Next Movement/i }));
+    expect(container.querySelector('.player-action-card')).not.toBeNull();
+    expect(container.querySelector('.player-nav-bar')).not.toBeNull();
+
+    // Complete Set 1 -> inline Rest timer activates inside .stage-status-slot without changing stage structure
+    await user.click(await screen.findByRole('button', { name: /Complete Set 1/i }));
+    expect(screen.getByRole('status')).toHaveTextContent(/Rest/i);
+    expect(container.querySelector('.rest-pill-inline')).not.toBeNull();
+    expect(container.querySelector('.player-action-card')).not.toBeNull();
+
+    // Complete Set 2 -> Effort prompt renders inside the same .player-action-card
+    await user.click(screen.getByRole('button', { name: /Complete Set 2/i }));
+    expect(screen.getByText(/How did that feel\?/i)).toBeInTheDocument();
+    expect(container.querySelector('.player-action-card')).not.toBeNull();
+    expect(container.querySelector('.player-nav-bar')).not.toBeNull();
+
+    // Open Pause sheet and exit without saving
+    await user.click(screen.getByRole('button', { name: /^Pause$/i }));
+    await user.click(screen.getByRole('button', { name: /Exit Without Saving/i }));
+
+    // Back on Today with NO Paused Session banner and zero saved sessions/progress
+    expect(await screen.findByRole('heading', { name: /Ready, John\?/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Paused Session/i)).not.toBeInTheDocument();
+    expect(container.querySelector('.app-shell.workout-lock')).toBeNull();
+
+    const state = await storageRepo.initializeAndLoad();
+    expect(state.activeSession).toBeNull();
+    expect(state.sessions).toHaveLength(0);
+    expect(Object.keys(state.progress)).toHaveLength(0);
+  });
 });

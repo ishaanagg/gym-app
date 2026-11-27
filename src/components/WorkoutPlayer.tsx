@@ -63,7 +63,7 @@ const TimedStage: React.FC<TimedStageProps> = ({
   const pct = durationSec > 0 ? Math.round(((durationSec - remaining) / durationSec) * 100) : 0;
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="card player-action-card">
       <div className="timer-box">
         <div className="timer-digits mono">{formatClock(remaining)}</div>
         <div className="player-progress-track">
@@ -73,7 +73,7 @@ const TimedStage: React.FC<TimedStageProps> = ({
           <button
             type="button"
             className="btn btn-secondary"
-            style={{ flex: 1 }}
+            style={{ flex: 1, minHeight: 40, padding: '8px 12px', fontSize: '0.9rem' }}
             onClick={() => {
               triggerHaptic(10);
               if (remaining === 0) setRemaining(durationSec);
@@ -82,11 +82,11 @@ const TimedStage: React.FC<TimedStageProps> = ({
           >
             {running ? (
               <>
-                <Pause size={16} /> Pause
+                <Pause size={15} /> Pause Timer
               </>
             ) : (
               <>
-                <Play size={16} fill="currentColor" />{' '}
+                <Play size={15} fill="currentColor" />{' '}
                 {remaining < durationSec && remaining > 0 ? 'Resume' : 'Start Timer'}
               </>
             )}
@@ -94,14 +94,14 @@ const TimedStage: React.FC<TimedStageProps> = ({
           <button
             type="button"
             className="btn btn-secondary"
-            style={{ padding: '0 14px' }}
+            style={{ minHeight: 40, padding: '0 13px' }}
             onClick={() => {
               setRunning(false);
               setRemaining(durationSec);
             }}
             aria-label="Reset timer"
           >
-            <RotateCcw size={16} />
+            <RotateCcw size={15} />
           </button>
         </div>
       </div>
@@ -166,37 +166,56 @@ const StrengthStage: React.FC<StrengthStageProps> = ({
   };
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Compact Set Selector Pills */}
-      {planned.sets.length > 1 && (
-        <div className="set-pills" role="tablist" aria-label="Sets">
-          {planned.sets.map((s) => {
-            const isSelected = s.setNumber === activeSet.setNumber && !allSetsDone;
-            return (
-              <button
-                key={s.setNumber}
-                type="button"
-                role="tab"
-                aria-selected={isSelected}
-                className={`set-pill ${s.completed ? 'done' : ''} ${isSelected ? 'active' : ''}`}
-                onClick={() => setSelectedSetNum(s.setNumber)}
-              >
-                {s.completed && <Check size={13} />}
-                <span>Set {s.setNumber}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+    <div className="card player-action-card">
+      {/* Always render Set Selector Strip so 1-set and multi-set stages share exact height */}
+      <div className="set-pills" role="tablist" aria-label="Sets">
+        {planned.sets.map((s) => {
+          const isSelected = s.setNumber === activeSet.setNumber && !allSetsDone;
+          return (
+            <button
+              key={s.setNumber}
+              type="button"
+              role="tab"
+              aria-selected={isSelected}
+              className={`set-pill ${s.completed ? 'done' : ''} ${isSelected ? 'active' : ''}`}
+              onClick={() => setSelectedSetNum(s.setNumber)}
+            >
+              {s.completed && <Check size={13} />}
+              <span>Set {s.setNumber}</span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Single Active-Set Dials */}
       {!allSetsDone ? (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span className="section-label">Set {activeSet.setNumber}</span>
-            <span className="exercise-meta mono">
-              Target {exercise.repRange[0]}–{exercise.repRange[1]} reps
-            </span>
+          <div className="stage-status-slot">
+            {restSeconds > 0 ? (
+              <div className="rest-pill-inline" role="status" aria-live="polite">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Timer size={14} color="var(--accent-emerald-bright)" />
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
+                    Rest <span className="mono">{formatClock(restSeconds)}</span>
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button type="button" className="rest-pill-btn" onClick={onAddRest}>
+                    +15s
+                  </button>
+                  <button type="button" className="rest-pill-btn" onClick={onClearRest}>
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span className="section-label">Set {activeSet.setNumber}</span>
+                <span className="exercise-meta mono">
+                  Target {exercise.repRange[0]}–{exercise.repRange[1]} reps
+                </span>
+              </>
+            )}
           </div>
 
           <div className={`dial-grid ${hasWeights ? '' : 'single'}`}>
@@ -249,25 +268,6 @@ const StrengthStage: React.FC<StrengthStageProps> = ({
             </div>
           </div>
 
-          {restSeconds > 0 && (
-            <div className="rest-pill" role="status" aria-live="polite">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Timer size={15} color="var(--accent-emerald-bright)" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                  Rest <span className="mono">{formatClock(restSeconds)}</span>
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: 4 }}>
-                <button type="button" className="btn-ghost" onClick={onAddRest}>
-                  +15s
-                </button>
-                <button type="button" className="btn-ghost" onClick={onClearRest}>
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          )}
-
           <button
             type="button"
             className="btn btn-primary"
@@ -278,16 +278,21 @@ const StrengthStage: React.FC<StrengthStageProps> = ({
           </button>
         </>
       ) : (
-        /* Progressive Disclosure: Effort Rating appears cleanly once sets are done */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span className="section-label" style={{ color: 'var(--accent-emerald-bright)' }}>
-              All {planned.sets.length} Sets Done · How did that feel?
-            </span>
-            <span className="mono" style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              {hasWeights
-                ? `${activeSet.actualWeight} ${unit} × ${activeSet.actualReps}`
-                : `${activeSet.actualReps} reps`}
+        /* Progressive Disclosure: Effort Rating occupies exact same stage box */
+        <>
+          <div className="effort-stage-body">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+              <span className="section-label" style={{ color: 'var(--accent-emerald-bright)' }}>
+                All {planned.sets.length} {planned.sets.length === 1 ? 'Set' : 'Sets'} Done · How did that feel?
+              </span>
+              <span className="mono" style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                {hasWeights
+                  ? `${activeSet.actualWeight} ${unit} × ${activeSet.actualReps}`
+                  : `${activeSet.actualReps} reps`}
+              </span>
+            </div>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              Tunes your target for next session and advances automatically.
             </span>
           </div>
           <div className="effort-grid">
@@ -310,7 +315,7 @@ const StrengthStage: React.FC<StrengthStageProps> = ({
               </button>
             ))}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
@@ -325,6 +330,7 @@ interface WorkoutPlayerProps {
   onUpdateSession: (updated: WorkoutSession) => void;
   onSwapExercise: (blockType: BlockType, instanceId: string, newExercise: Exercise) => void;
   onFinishWorkout: (completedSession: WorkoutSession) => void;
+  onDiscardSession: () => void;
   onExit: () => void;
 }
 
@@ -343,6 +349,7 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
   onUpdateSession,
   onSwapExercise,
   onFinishWorkout,
+  onDiscardSession,
   onExit,
 }) => {
   useWakeLock(true);
@@ -370,6 +377,7 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
   const [showSwapSheet, setShowSwapSheet] = useState(false);
   const [restSeconds, setRestSeconds] = useState<number>(0);
   const advanceTimerRef = useRef<number | null>(null);
+  const guideCardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -401,6 +409,9 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
     if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
     setRestSeconds(0);
     setStepIdx(nextIdx);
+    if (guideCardRef.current) {
+      guideCardRef.current.scrollTop = 0;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -549,7 +560,7 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
     }
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="player-completed">
         <div className="card" style={{ textAlign: 'center', padding: '32px 20px' }}>
           <div
             style={{
@@ -609,103 +620,105 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
   const isLastStep = stepIdx === steps.length - 1;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      {/* Clean Chrome-Free Player Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <button type="button" className="btn-ghost" onClick={() => setShowExitSheet(true)}>
-          Pause
-        </button>
-        <span className="section-label" style={{ textAlign: 'center' }}>
-          {currentStep.blockTitle} · {stepIdx + 1}/{steps.length}
-        </span>
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={() => setShowSwapSheet(true)}
-          aria-label={`Swap ${currentExercise.name}`}
-          title={`Swap ${currentExercise.name}`}
-        >
-          <ArrowLeftRight size={15} />
-        </button>
+    <div className="player-shell">
+      {/* Zone A: Pinned Chrome-Free Player Header */}
+      <div className="player-top">
+        <div className="player-header-row">
+          <button type="button" className="btn-ghost" onClick={() => setShowExitSheet(true)}>
+            Pause
+          </button>
+          <span className="section-label" style={{ textAlign: 'center' }}>
+            {currentStep.blockTitle} · {stepIdx + 1}/{steps.length}
+          </span>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setShowSwapSheet(true)}
+            aria-label={`Swap ${currentExercise.name}`}
+            title={`Swap ${currentExercise.name}`}
+          >
+            <ArrowLeftRight size={15} />
+          </button>
+        </div>
+
+        <div className="player-progress-track">
+          <div className="player-progress-fill" style={{ width: `${progressPct}%` }} />
+        </div>
       </div>
 
-      <div className="player-progress-track">
-        <div className="player-progress-fill" style={{ width: `${progressPct}%` }} />
-      </div>
-
-      {/* Movement Posture & Cues */}
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: 4 }}>
+      {/* Zone B: Flexible Movement Posture & Cues (absorbs title/badge/cue height changes) */}
+      <div ref={guideCardRef} className="card player-guide-card">
+        <div style={{ flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span className="badge badge-slate">{currentEquipment?.name}</span>
             {currentStep.planned.isFirstTime && currentStep.blockType === 'strength' && (
               <span className="badge badge-amber">Start comfortable — we&apos;ll tune from here</span>
             )}
           </div>
-          <h1 className="page-title" style={{ marginTop: 4 }}>
-            {currentExercise.name}
-          </h1>
+          <h1 className="player-title">{currentExercise.name}</h1>
         </div>
 
         <FormVisual visualKey={currentExercise.visualKey} label={currentExercise.name} />
 
-        <ul className="cue-list">
+        <ul className="cue-list" style={{ flexShrink: 0 }}>
           {currentExercise.safetyCues.map((cue, idx) => (
             <li key={idx}>{cue}</li>
           ))}
         </ul>
       </div>
 
-      {/* Focused Action Stage */}
-      {isTimedFlow ? (
-        <TimedStage
-          key={currentStep.planned.instanceId}
-          durationSec={currentExercise.durationSec ?? 60}
-          completed={currentStep.planned.sets[0]?.completed ?? false}
-          isLastStep={isLastStep}
-          onCompleteAndAdvance={handleCompleteTimedAndAdvance}
-          onMarkCompletedOnly={() => {
-            applyExerciseUpdate((pe) => ({
-              ...pe,
-              sets: pe.sets.map((s) => ({ ...s, completed: true })),
-            }));
-          }}
-        />
-      ) : (
-        <StrengthStage
-          key={currentStep.planned.instanceId}
-          planned={currentStep.planned}
-          exercise={currentExercise}
-          equipment={currentEquipment}
-          restSeconds={restSeconds}
-          onAddRest={() => setRestSeconds((s) => s + 15)}
-          onClearRest={() => setRestSeconds(0)}
-          onStepWeight={stepWeight}
-          onStepReps={stepReps}
-          onCompleteSet={completeSingleSet}
-          onRateEffortAndAdvance={handleRateEffortAndAdvance}
-        />
-      )}
+      {/* Zone C: Spatial-Locked Action Stage + Step Navigation */}
+      <div className="player-dock">
+        {isTimedFlow ? (
+          <TimedStage
+            key={currentStep.planned.instanceId}
+            durationSec={currentExercise.durationSec ?? 60}
+            completed={currentStep.planned.sets[0]?.completed ?? false}
+            isLastStep={isLastStep}
+            onCompleteAndAdvance={handleCompleteTimedAndAdvance}
+            onMarkCompletedOnly={() => {
+              applyExerciseUpdate((pe) => ({
+                ...pe,
+                sets: pe.sets.map((s) => ({ ...s, completed: true })),
+              }));
+            }}
+          />
+        ) : (
+          <StrengthStage
+            key={currentStep.planned.instanceId}
+            planned={currentStep.planned}
+            exercise={currentExercise}
+            equipment={currentEquipment}
+            restSeconds={restSeconds}
+            onAddRest={() => setRestSeconds((s) => s + 15)}
+            onClearRest={() => setRestSeconds(0)}
+            onStepWeight={stepWeight}
+            onStepReps={stepReps}
+            onCompleteSet={completeSingleSet}
+            onRateEffortAndAdvance={handleRateEffortAndAdvance}
+          />
+        )}
 
-      {/* Quiet Secondary Step Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button
-          type="button"
-          className="btn-ghost"
-          disabled={stepIdx === 0}
-          onClick={() => goToStep(Math.max(0, stepIdx - 1))}
-          style={{ opacity: stepIdx === 0 ? 0.3 : 1 }}
-        >
-          <ChevronLeft size={16} /> Previous
-        </button>
+        {/* Pinned Step Navigation — stays at exact Y coordinate across all exercises */}
+        <div className="player-nav-bar">
+          <button
+            type="button"
+            className="btn-ghost"
+            disabled={stepIdx === 0}
+            onClick={() => goToStep(Math.max(0, stepIdx - 1))}
+            style={{ opacity: stepIdx === 0 ? 0.3 : 1 }}
+          >
+            <ChevronLeft size={16} /> Previous
+          </button>
 
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={() => advanceOrFinish(session)}
-        >
-          {isLastStep ? 'Finish Now' : 'Skip'} <ChevronRight size={16} />
-        </button>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => advanceOrFinish(session)}
+          >
+            {isLastStep ? 'Finish Now' : 'Skip'} <ChevronRight size={16} />
+          </button>
+        </div>
       </div>
 
       {showSwapSheet && (
@@ -731,12 +744,15 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+            aria-labelledby="pause-sheet-title"
+            style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
           >
             <div className="sheet-handle" />
-            <h2 style={{ margin: 0, fontSize: '1.12rem' }}>Pause Session?</h2>
-            <p className="page-subtitle">
-              Your completed sets are saved automatically. Resume anytime from <strong>Today</strong>.
+            <h2 id="pause-sheet-title" style={{ margin: 0, fontSize: '1.12rem' }}>
+              Pause or Exit Session?
+            </h2>
+            <p className="page-subtitle" style={{ marginBottom: 2 }}>
+              Pause to resume later from <strong>Today</strong>, save finished sets, or exit without saving.
             </p>
             <button
               type="button"
@@ -757,12 +773,32 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
             </button>
             <button
               type="button"
-              className="btn-ghost"
-              style={{ alignSelf: 'center', color: 'var(--accent-emerald-bright)' }}
+              className="btn btn-secondary"
+              style={{ color: 'var(--accent-emerald-bright)' }}
               onClick={() => finalizeWithSession(session)}
             >
               End &amp; Save Completed Sets
             </button>
+            <div
+              style={{
+                borderTop: '1px solid var(--border-hairline)',
+                marginTop: 2,
+                paddingTop: 10,
+              }}
+            >
+              <button
+                type="button"
+                className="btn-danger-ghost"
+                onClick={() => {
+                  if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
+                  setRestSeconds(0);
+                  setShowExitSheet(false);
+                  onDiscardSession();
+                }}
+              >
+                Exit Without Saving
+              </button>
+            </div>
           </div>
         </div>
       )}

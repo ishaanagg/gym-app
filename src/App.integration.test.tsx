@@ -19,7 +19,7 @@ describe('Kinetic End-to-End User Journeys', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Works 100% offline/i)).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText(/What should we call you/i), 'Ishaan');
+    await user.type(screen.getByLabelText(/What should we call you/i), 'John');
     await user.type(screen.getByLabelText(/Building or gym name/i), 'The Arden');
     await user.click(screen.getByRole('button', { name: /Continue/i }));
 
@@ -30,20 +30,20 @@ describe('Kinetic End-to-End User Journeys', () => {
     await user.click(screen.getByRole('button', { name: /Set Up Later in Settings/i }));
 
     // Lands on personalized Today screen
-    expect(await screen.findByRole('heading', { name: /Ready, Ishaan\?/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Ready, John\?/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /The Arden/i })).toBeInTheDocument();
 
     // Remounting App simulates closing and reopening the PWA -> skips onboarding
     unmount();
     render(<App />);
-    expect(await screen.findByRole('heading', { name: /Ready, Ishaan\?/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Ready, John\?/i })).toBeInTheDocument();
   });
 
   it('runs a full workout with smart weight carry-forward, pause/resume recovery, effort auto-advance, and Momentum tracking', async () => {
     // Pre-mark onboarding completed so we start right on Today
     await storageRepo.initializeAndLoad();
     await storageRepo.saveSettings({
-      userName: 'Ishaan',
+      userName: 'John',
       gymName: 'The Arden',
       onboardingCompleted: true,
     });
@@ -51,7 +51,7 @@ describe('Kinetic End-to-End User Journeys', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: /Ready, Ishaan\?/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Ready, John\?/i })).toBeInTheDocument();
 
     // Choose 20m duration + Arms focus
     await user.click(screen.getByRole('radio', { name: /20/i }));
@@ -99,7 +99,7 @@ describe('Kinetic End-to-End User Journeys', () => {
   it('auto-links coach movements when adding a preset in My Gym and protects baseline weights on Light sessions', async () => {
     await storageRepo.initializeAndLoad();
     await storageRepo.saveSettings({
-      userName: 'Ishaan',
+      userName: 'John',
       gymName: 'The Arden',
       onboardingCompleted: true,
     });
@@ -117,7 +117,7 @@ describe('Kinetic End-to-End User Journeys', () => {
 
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByRole('heading', { name: /Ready, Ishaan\?/i });
+    await screen.findByRole('heading', { name: /Ready, John\?/i });
 
     // 1. Add Kettlebells via Quick-Add Preset in My Gym
     await user.click(screen.getByRole('button', { name: /My Gym/i }));

@@ -97,7 +97,7 @@ describe('IndexedDBStorageRepository', () => {
     const sourceRepo = new IndexedDBStorageRepository('test-export-src');
     await sourceRepo.initializeAndLoad();
     await sourceRepo.saveSettings({
-      userName: 'Ishaan',
+      userName: 'John',
       gymName: 'Skyline Gym',
       onboardingCompleted: true,
       driveBackupEnabled: true,
@@ -119,7 +119,7 @@ describe('IndexedDBStorageRepository', () => {
     await targetRepo.importAll(exported);
     const restored = await targetRepo.initializeAndLoad();
 
-    expect(restored.settings.userName).toBe('Ishaan');
+    expect(restored.settings.userName).toBe('John');
     expect(restored.settings.gymName).toBe('Skyline Gym');
     expect(restored.settings.onboardingCompleted).toBe(true);
     expect(restored.progress['ex-machine-chest-press']?.currentWeight).toBe(90);

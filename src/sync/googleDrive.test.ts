@@ -9,7 +9,7 @@ const sampleBackup: GymExportData = {
   exercises: [],
   sessions: [],
   progress: [],
-  settings: { userName: 'Ishaan', gymName: 'The Arden', onboardingCompleted: true },
+  settings: { userName: 'John', gymName: 'The Arden', onboardingCompleted: true },
 };
 
 describe('GoogleDriveBackupProvider', () => {
@@ -97,7 +97,7 @@ describe('GoogleDriveBackupProvider', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(sampleBackup), { status: 200 }));
 
     const restored = await provider.restore();
-    expect(restored?.settings?.userName).toBe('Ishaan');
+    expect(restored?.settings?.userName).toBe('John');
   });
 
   it('clears expired token on HTTP 401 and revokes token on disconnect()', async () => {

@@ -233,7 +233,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               setUserName(next);
               scheduleAutoSave(next, gymName);
             }}
-            placeholder="e.g., Ishaan"
+            placeholder="e.g., John"
             maxLength={40}
             autoComplete="given-name"
           />

@@ -198,7 +198,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({
                 className="input-field"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                placeholder="Your first name (e.g., Ishaan)"
+                placeholder="Your first name (e.g., John)"
                 maxLength={40}
                 autoComplete="given-name"
               />

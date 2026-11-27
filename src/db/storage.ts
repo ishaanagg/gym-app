@@ -69,12 +69,34 @@ const SETTINGS_KEY = 'settings';
 /** Set once defaults are seeded so deleting every machine doesn't re-seed them on next load. */
 const EQUIPMENT_SEEDED_KEY = 'equipmentSeeded';
 
-class IndexedDBStorageRepository implements StorageRepository {
+export class IndexedDBStorageRepository implements StorageRepository {
   private dbPromise: Promise<IDBPDatabase<GymDB>> | null = null;
+  private readonly dbName: string;
+
+  constructor(dbName: string = DB_NAME) {
+    this.dbName = dbName;
+  }
+
+  /** Clears all stores atomically so UI integration tests start from a fresh slate without deleteDatabase blocks. */
+  async clearAllForTests(): Promise<void> {
+    const db = await this.getDB();
+    const tx = db.transaction(
+      ['equipment', 'exercises', 'sessions', 'progress', 'meta'],
+      'readwrite'
+    );
+    await Promise.all([
+      tx.objectStore('equipment').clear(),
+      tx.objectStore('exercises').clear(),
+      tx.objectStore('sessions').clear(),
+      tx.objectStore('progress').clear(),
+      tx.objectStore('meta').clear(),
+    ]);
+    await tx.done;
+  }
 
   private getDB(): Promise<IDBPDatabase<GymDB>> {
     if (!this.dbPromise) {
-      this.dbPromise = openDB<GymDB>(DB_NAME, DB_VERSION, {
+      this.dbPromise = openDB<GymDB>(this.dbName, DB_VERSION, {
         upgrade(db) {
           if (!db.objectStoreNames.contains('equipment')) {
             db.createObjectStore('equipment', { keyPath: 'id' });
@@ -251,4 +273,4 @@ class IndexedDBStorageRepository implements StorageRepository {
   }
 }
 
-export const storageRepo: StorageRepository = new IndexedDBStorageRepository();
+export const storageRepo = new IndexedDBStorageRepository();

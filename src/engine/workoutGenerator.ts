@@ -314,6 +314,8 @@ export function generateWorkoutSession(
   const strengthTargets: TargetArea[] = targets.filter((t) => t !== 'abs');
   const absOnly = targets.length === 1 && targets[0] === 'abs';
 
+  const emergencyStrengthPool = emergencyFloorPool.filter((e) => e.block === 'strength');
+
   if (targets.length === 0) {
     const slots =
       intensity === 'light' && durationMin === 30
@@ -327,6 +329,15 @@ export function generateWorkoutSession(
       if (candidates.length === 0 && slot === 'lower_any') {
         const other = pattern === 'lower_squat' ? 'lower_hinge' : 'lower_squat';
         candidates = strengthPool.filter((e) => e.pattern === other && !pickedIds.has(e.id));
+      }
+      if (candidates.length === 0) {
+        candidates = emergencyStrengthPool.filter(
+          (e) =>
+            !pickedIds.has(e.id) &&
+            (e.pattern === pattern ||
+              (slot === 'lower_any' &&
+                (e.pattern === 'lower_squat' || e.pattern === 'lower_hinge')))
+        );
       }
       const chosen = pickBalancedExercise(
         candidates,
@@ -348,7 +359,14 @@ export function generateWorkoutSession(
     for (const slot of supportSlots) {
       const pattern: MovementPattern =
         slot === 'lower_any' ? chooseLowerPattern(planeHistory, sessionPicks) : slot;
-      const candidates = strengthPool.filter((e) => e.pattern === pattern && !pickedIds.has(e.id));
+      let candidates = strengthPool.filter((e) => e.pattern === pattern && !pickedIds.has(e.id));
+      if (candidates.length === 0 && slot === 'lower_any') {
+        const other = pattern === 'lower_squat' ? 'lower_hinge' : 'lower_squat';
+        candidates = strengthPool.filter((e) => e.pattern === other && !pickedIds.has(e.id));
+      }
+      if (candidates.length === 0) {
+        candidates = emergencyStrengthPool.filter((e) => !pickedIds.has(e.id));
+      }
       const chosen = pickBalancedExercise(
         candidates,
         recentIds,
@@ -384,6 +402,18 @@ export function generateWorkoutSession(
         candidates = unused.filter((ex) =>
           resolveTargetAreas(ex).primary.some((a) => strengthTargets.includes(a))
         );
+      }
+
+      // Per-slot floor bodyweight fallback when every machine for this target area is off
+      if (candidates.length === 0) {
+        const unusedFloor = emergencyStrengthPool.filter((e) => !pickedIds.has(e.id));
+        candidates = unusedFloor.filter((ex) => {
+          const areas = resolveTargetAreas(ex);
+          return areas.primary.includes(targetArea) || areas.secondary.includes(targetArea);
+        });
+        if (candidates.length === 0) {
+          candidates = unused.length > 0 ? unused : unusedFloor;
+        }
       }
 
       const chosen = pickBalancedExercise(
